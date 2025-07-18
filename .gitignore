@@ -130,3 +130,5 @@ dmypy.json
 
 # Test harness repositories
 harness/
+
+dbs/
