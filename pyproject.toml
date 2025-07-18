@@ -1,0 +1,36 @@
+[project]
+name = "mrva"
+version = "0.5.0"
+description = "A CLI tool for running CodeQL multi-repo variant analyses"
+license = "AGPL-3.0"
+readme = "README.md"
+requires-python = ">=3.9,<4"
+authors = []
+dependencies = [
+    "httpx"
+]
+
+[project.urls]
+homepage = "https://github.com/trailofbits/mrva"
+repository = "https://github.com/trailofbits/mrva"
+
+[project.scripts]
+mrva = "mrva.main:main"
+
+[tool.poetry]
+packages = [{include = "mrva"}]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.1"
+pytest-cov = "^4.0"
+pre-commit = "^4.2.0"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.coverage.run]
+source = ["mrva"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

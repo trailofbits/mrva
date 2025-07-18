@@ -1,0 +1,153 @@
+import asyncio
+import logging
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+
+def gh_item_limiter(limit, key="items"):
+    current_count = 0
+
+    def limiter(response):
+        nonlocal current_count
+        items = response.json()[key]
+        current_count += len(items)
+        return limit != 0 and current_count >= limit
+
+    return limiter
+
+
+RETRIES = {
+    httpx.codes.TOO_MANY_REQUESTS: 60,
+    httpx.ConnectError: 5,
+}
+
+
+async def retry(fn, *args, count=5, timeout=60, **kwargs):
+    # https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28
+    for i in range(count):
+        try:
+            response = await fn(*args, **kwargs)
+        except Exception as e:
+            if type(e) not in RETRIES:
+                raise e
+            logging.info(
+                "Retry exception %s request to %s, sleep=%d, retry=%d",
+                e,
+                args[0],
+                timeout,
+                i,
+            )
+            await asyncio.sleep(timeout)
+            continue
+
+        if response.status_code in RETRIES:
+            logging.info(
+                "Retry rate-limited %s request to %s, sleep=%d, retry=%d",
+                response.status_code,
+                args[0],
+                timeout,
+                i,
+            )
+            await asyncio.sleep(timeout)
+        else:
+            return response
+
+    logging.warning("Retry exceeded for %s", args[0])
+
+
+class Client:
+    def __init__(self, token):
+        # https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api?apiVersion=2022-11-28#headers
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+        if token:
+            # https://docs.github.com/en/rest/authentication/authenticating-to-the-rest-api?apiVersion=2022-11-28
+            headers["Authorization"] = f"Bearer {token}"
+
+        client = httpx.AsyncClient(
+            base_url="https://api.github.com",
+            headers=headers,
+        )
+
+        self.client = client
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.client.aclose()
+
+    async def _paginated_get(self, url, limiter=None, *args, **kwargs):
+        first_response = await retry(self.client.get, url, *args, **kwargs)
+        yield first_response
+        if limiter(first_response):
+            return
+        next_url = first_response.links.get("next", {}).get("url")
+
+        # Avoid first call in the while loop because we no longer want to pass
+        # *args and **kwargs to the client. The value obtained from the links
+        # already contains this data in the URL parameters.
+        while next_url:
+            next_response = await retry(self.client.get, next_url)
+            yield next_response
+            if limiter(next_response):
+                break
+            next_url = next_response.links.get("next", {}).get("url")
+
+    async def list_codeql_databases(self, owner_repository):
+        # https://docs.github.com/en/rest/code-scanning/code-scanning?apiVersion=2022-11-28#list-codeql-databases-for-a-repository
+        return await retry(
+            self.client.get, f"/repos/{owner_repository}/code-scanning/codeql/databases"
+        )
+
+    async def get_codeql_database(self, owner_repository, language, content=False):
+        kwargs = {}
+        if content:
+            kwargs["headers"] = {"Accept": "application/zip"}
+            kwargs["follow_redirects"] = True
+
+        # https://docs.github.com/en/rest/code-scanning/code-scanning?apiVersion=2022-11-28#get-a-codeql-database-for-a-repository
+        return await retry(
+            self.client.get,
+            f"/repos/{owner_repository}/code-scanning/codeql/databases/{language}",
+            **kwargs,
+        )
+
+    async def search_repos(self, query, limit=0):
+        per_page = 100 if limit == 0 or limit > 100 else limit
+
+        # https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-repositories
+        return [
+            repo
+            async for page in self._paginated_get(
+                "/search/repositories",
+                limiter=gh_item_limiter(limit=limit),
+                params={
+                    "q": query,
+                    "sort": "stars",
+                    "order": "desc",
+                    "per_page": per_page,
+                },
+            )
+            for repo in page.json()["items"]
+        ]
+
+    async def get_repo(self, owner, repo):
+        # https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository
+        return await retry(
+            self.client.get,
+            f"/repos/{owner}/{repo}",
+        )
+
+    async def get_repo_zipball(self, full_name, ref):
+        # https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-zip
+        return await retry(
+            self.client.get,
+            f"/repos/{full_name}/zipball/{ref}",
+            follow_redirects=True,
+        )
