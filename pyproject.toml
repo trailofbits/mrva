@@ -7,7 +7,7 @@ readme = "README.md"
 requires-python = ">=3.9,<4"
 authors = []
 dependencies = [
-    "httpx"
+    "httpx",
 ]
 
 [project.urls]
@@ -21,8 +21,9 @@ mrva = "mrva.main:main"
 packages = [{include = "mrva"}]
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.2.1"
+pytest = "^8.2.0"
 pytest-cov = "^4.0"
+pytest-asyncio = "^1.1.0"
 pre-commit = "^4.2.0"
 
 [tool.poetry.group.dev]
@@ -30,6 +31,9 @@ optional = true
 
 [tool.coverage.run]
 source = ["mrva"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["poetry-core"]

@@ -85,7 +85,7 @@ class Client:
     async def _paginated_get(self, url, limiter=None, *args, **kwargs):
         first_response = await retry(self.client.get, url, *args, **kwargs)
         yield first_response
-        if limiter(first_response):
+        if limiter is not None and limiter(first_response):
             return
         next_url = first_response.links.get("next", {}).get("url")
 
@@ -95,7 +95,7 @@ class Client:
         while next_url:
             next_response = await retry(self.client.get, next_url)
             yield next_response
-            if limiter(next_response):
+            if limiter is not None and limiter(next_response):
                 break
             next_url = next_response.links.get("next", {}).get("url")
 

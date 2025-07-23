@@ -29,3 +29,4 @@ jobs:
           poetry env use ${{ matrix.python-version }}
           poetry install --with dev
           poetry run pre-commit run --all
+          poetry run pytest --cov
