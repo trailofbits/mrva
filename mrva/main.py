@@ -32,6 +32,23 @@ CODEQL_LANGUAGES = [
 ]
 
 
+class EnvDefault(argparse.Action):
+    def __init__(self, envvar, required=True, default=None, **kwargs):
+        if envvar and envvar in os.environ:
+            default = os.environ[envvar]
+        if required and default:
+            required = False
+
+        super(EnvDefault, self).__init__(
+            default=default,
+            required=required,
+            **kwargs,
+        )
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
+
+
 def parse_args():
     # fmt: off
     p = argparse.ArgumentParser(
@@ -60,8 +77,17 @@ def parse_args():
     download_parser.add_argument(
         "-t",
         "--token",
-        action="store",
-        help="GitHub API token"
+        action=EnvDefault,
+        envvar="GITHUB_TOKEN",
+        help="GitHub API token, or specify $GITHUB_TOKEN"
+    )
+    download_parser.add_argument(
+        "-b",
+        "--base-url",
+        action=EnvDefault,
+        default="https://api.github.com",
+        envvar="GITHUB_BASE_URL",
+        help="GitHub base URL, or specify $GITHUB_BASE_URL"
     )
     download_parser.add_argument(
         "-l",

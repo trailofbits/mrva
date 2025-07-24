@@ -97,7 +97,7 @@ async def download_repo_contents(client, repo, language, mrva_dir):
 
 
 async def main(args, argv):
-    async with gh.Client(args.token) as client:
+    async with gh.Client(args.token, args.base_url) as client:
         if args.download_command == "top":
             query = f"language:{args.language}"
             repos = await client.search_repos(query, limit=args.limit)
