@@ -283,7 +283,11 @@ async def amain():
 
 
 def main():
-    return asyncio.run(amain())
+    try:
+        return asyncio.run(amain())
+    except KeyboardInterrupt:
+        logger.info("Received KeyboardInterrupt, exiting...")
+        return 1
 
 
 if __name__ == "__main__":
