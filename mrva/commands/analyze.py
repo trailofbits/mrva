@@ -3,6 +3,8 @@ import logging
 import subprocess
 import sys
 
+from mrva import util
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,10 +14,27 @@ async def main(args, argv):
     logger.info("Analyzing mrva directory created at %s", config["created"])
 
     analyzable_repos = [r for r in config["repos"] if r["success"]]
-    logger.info("Analyzing %d repositories", len(analyzable_repos))
+    logger.info("Found %d analyzable repositories", len(analyzable_repos))
+
+    if args.select:
+        kept, ignored = util.partition(
+            analyzable_repos,
+            lambda r: any(term in r["mrva_name"] for term in args.select),
+        )
+        logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
+        repos = kept
+    elif args.ignore:
+        kept, ignored = util.partition(
+            analyzable_repos,
+            lambda r: any(term not in r["mrva_name"] for term in args.ignore),
+        )
+        logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
+        repos = kept
+    else:
+        repos = analyzable_repos
 
     total_results = 0
-    for repo in analyzable_repos:
+    for repo in repos:
         output_path = args.mrva_dir / repo["mrva_name"] / "mrva-output.sarif"
         db_dir = args.mrva_dir / repo["mrva_name"] / repo["db_dir"]
         command = [

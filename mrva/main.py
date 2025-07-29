@@ -196,6 +196,17 @@ def parse_args():
         default=os.getcwd(),
         help="Queries to execute, passed to CodeQL like [<query|dir|suite|pack>...]"
     )
+    filter_group = analyze_parser.add_mutually_exclusive_group(required=False)
+    filter_group.add_argument(
+        "--select",
+        action="append",
+        help="Select CodeQL databases that contain these mrva names"
+    )
+    filter_group.add_argument(
+        "--ignore",
+        action="append",
+        help="Ignore CodeQL databases that contain these mrva names"
+    )
 
     pprint_parser = subparsers.add_parser(
         "pprint",

@@ -1,6 +1,5 @@
 import asyncio
 import io
-import itertools
 import json
 import logging
 import pathlib
@@ -10,15 +9,9 @@ import zipfile
 import httpx
 
 from mrva import gh
+from mrva import util
 
 logger = logging.getLogger(__name__)
-
-
-# https://docs.python.org/3/library/itertools.html#itertools.batched
-def batched(iterable, n):
-    iterator = iter(iterable)
-    while batch := tuple(itertools.islice(iterator, n)):
-        yield batch
 
 
 def get_zipfile_top_dir(zf):
@@ -123,7 +116,7 @@ async def main(args, argv):
 
         # Batch download requests to avoid this weird bug:
         # https://github.com/encode/httpx/issues/1171
-        for i, batch in enumerate(batched(repos, 100), 1):
+        for i, batch in enumerate(util.batched(repos, 100), 1):
             logger.debug("Gathering batch %d of CodeQL databases", i)
             mrva_info = await asyncio.gather(
                 *(
