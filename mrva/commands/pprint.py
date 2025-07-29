@@ -8,9 +8,22 @@ logger = logging.getLogger(__name__)
 
 BOLD_RED = "\033[1;31m"
 BOLD_GREEN = "\033[1;32m"
+BOLD_CYAN = "\033[1;36m"
 END = "\033[0m"
 
 Context = collections.namedtuple("Context", ["before", "after"])
+
+
+def number_lines(lines, start=0, indent=0):
+    left_align = textwrap.dedent("\n".join(lines))
+    numbered_lines = [
+        f"{i + start} {line}" for i, line in enumerate(left_align.split("\n"))
+    ]
+    return textwrap.indent("\n".join(numbered_lines), " " * indent)
+
+
+def permalink(url, commit, path, start_line, end_line):
+    return f"{url}/blob/{commit[:7]}/{path}#L{start_line}-L{end_line}"
 
 
 def color(color, s):
@@ -114,31 +127,46 @@ async def main(args, argv):
         for (path, _), results in path_rule_groups.items()
     ]
 
+    result_count = 0
+    paths = set()
+    queries = set()
     empty_line = ""
     output = []
+
     for path, results, lines in path_results_lines:
+        paths.add(path)
+        result_count += len(results)
         output.append(color(BOLD_RED, path))
         output.append(empty_line)
 
-        for result, result_lines in zip(results, lines, strict=True):
-            numbered_lines = [
-                f"{i + max(result.start_line - context.before, 1)} {line}"
-                for i, line in enumerate(result_lines)
-            ]
-            result_name = color(BOLD_GREEN, result.rule_id)
-            result_description = color(BOLD_GREEN, result.message)
-            result_line_range = f"{result.start_line}-{result.end_line}"
-            result_header = f"{' ' * 2}{result_name}: {result_description} (ln: {result_line_range})"
-            result_joined_lines = textwrap.indent(
-                textwrap.dedent("\n".join(numbered_lines)), " " * 4
+        for result, lines in zip(results, lines, strict=True):
+            queries.add(result.rule_id)
+            name = color(BOLD_CYAN, result.rule_id)
+            description = color(BOLD_GREEN, result.message)
+            line_range = f"(ln: {result.start_line}-{result.end_line})"
+            link = permalink(
+                repo["url"],
+                repo["commit"],
+                path,
+                result.start_line,
+                result.end_line,
             )
+            header = f"{name}: {description} {line_range}"
+            start_line = max(result.start_line - context.before, 1)
+            numbered_lines = number_lines(lines, start_line, indent=4)
 
-            output.append(result_header)
+            output.append("  " + header)
+            output.append("  " + link)
             output.append(empty_line)
-            output.append(result_joined_lines)
+            output.append(numbered_lines)
             if numbered_lines and numbered_lines[-1] != empty_line:
                 output.append(empty_line)
 
     print("\n".join(output))
+
+    print("Totals")
+    print(f"  * Results: {result_count}")
+    print(f"  * Paths: {len(paths)}")
+    print(f"  * Queries: {len(queries)}")
 
     return 0
