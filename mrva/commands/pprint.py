@@ -69,12 +69,13 @@ class CodeQLArtifact:
 
     @property
     def contents(self):
-        return self.artifact["contents"]["text"]
+        # --sarif-add-file-contents provides this data
+        return self.artifact.get("contents", {}).get("text", "")
 
 
 def get_path_lines(artifact, results, context):
-    if not artifact:
-        return ""
+    if not artifact.contents:
+        return [[]] * len(results)
 
     def line_slice(start, end):
         # -1 for 0-based indexing
@@ -152,15 +153,17 @@ async def main(args, argv):
                 result.end_line,
             )
             header = f"{name}: {description} {line_range}"
-            start_line = max(result.start_line - context.before, 1)
-            numbered_lines = number_lines(lines, start_line, indent=4)
 
             output.append("  " + header)
             output.append("  " + link)
             output.append(empty_line)
-            output.append(numbered_lines)
-            if numbered_lines and numbered_lines[-1] != empty_line:
-                output.append(empty_line)
+
+            if lines:
+                start_line = max(result.start_line - context.before, 1)
+                numbered_lines = number_lines(lines, start_line, indent=4)
+                output.append(numbered_lines)
+                if numbered_lines and numbered_lines[-1] != empty_line:
+                    output.append(empty_line)
 
     print("\n".join(output))
 
