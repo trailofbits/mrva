@@ -140,11 +140,3 @@ class Client:
             self.client.get,
             f"/repos/{owner}/{repo}",
         )
-
-    async def get_repo_zipball(self, full_name, ref):
-        # https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-zip
-        return await retry(
-            self.client.get,
-            f"/repos/{full_name}/zipball/{ref}",
-            follow_redirects=True,
-        )

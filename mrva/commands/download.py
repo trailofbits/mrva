@@ -38,7 +38,7 @@ def get_zipfile_top_dir(zf):
     return str(path.parts[0])
 
 
-async def download_repo_contents(client, repo, language, mrva_dir):
+async def download_database_contents(client, repo, language, mrva_dir):
     logger.info("Downloading %s CodeQL database for %s", repo, language)
 
     # There's a slight data race here, but I think it's the best we can do.
@@ -50,16 +50,12 @@ async def download_repo_contents(client, repo, language, mrva_dir):
     )
     if json_resp.status_code != httpx.codes.OK:
         logger.warning("Could not download %s database json for %s", repo, language)
-        return (False, "", "", "", "")
+        return (False, "", "", "")
     if content_resp.status_code != httpx.codes.OK:
         logger.warning("Could not download %s database content for %s", repo, language)
-        return (False, "", "", "", "")
+        return (False, "", "", "")
 
     commit = json_resp.json()["commit_oid"]
-    if commit is None:
-        logger.warning("Received null commit info for %s %s", repo, language)
-        return (False, "", "", "", "")
-
     mrva_name = f"mrva-{language}-{repo.replace('/', '-')}"
     mrva_path = mrva_dir / mrva_name
 
@@ -67,26 +63,13 @@ async def download_repo_contents(client, repo, language, mrva_dir):
     db_top_dir = get_zipfile_top_dir(db_zf)
     if db_top_dir is None:
         logger.warning("Could not get db top-level directory for %s %s", repo, language)
-        return (False, "", "", "", "")
+        return (False, "", "", "")
 
     # extractall is perhaps insecure. Can attackers control the
     # zip layout of a GitHub generated CodeQL DB?
     db_zf.extractall(mrva_path)
 
-    code_resp = await client.get_repo_zipball(repo, commit)
-    code_zf = zipfile.ZipFile(io.BytesIO(code_resp.content))
-    code_top_dir = get_zipfile_top_dir(code_zf)
-    if code_top_dir is None:
-        logger.warning(
-            "Could not get code top-level directory for %s %s", repo, language
-        )
-        return (False, "", "", "", "")
-
-    # extractall is perhaps insecure. Can attackers control the
-    # zip layout of a GitHub generated repo?
-    code_zf.extractall(mrva_path)
-
-    return (True, mrva_name, db_top_dir, code_top_dir, commit)
+    return (True, mrva_name, db_top_dir, commit)
 
 
 async def main(args, argv):
@@ -120,7 +103,7 @@ async def main(args, argv):
             logger.debug("Gathering batch %d of CodeQL databases", i)
             mrva_info = await asyncio.gather(
                 *(
-                    download_repo_contents(
+                    download_database_contents(
                         client,
                         repo["full_name"],
                         args.language,
@@ -131,7 +114,7 @@ async def main(args, argv):
             )
 
             zipped = zip(batch, mrva_info, strict=True)
-            for repo, (success, mrva_name, db_dir, code_dir, commit) in zipped:
+            for repo, (success, mrva_name, db_dir, commit) in zipped:
                 repo_output = {
                     "url": repo["html_url"],
                     "success": success,
@@ -139,7 +122,6 @@ async def main(args, argv):
                 if success:
                     repo_output["mrva_name"] = mrva_name
                     repo_output["db_dir"] = db_dir
-                    repo_output["code_dir"] = code_dir
                     repo_output["commit"] = commit
 
                 output["repos"].append(repo_output)

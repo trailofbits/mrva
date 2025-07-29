@@ -88,7 +88,6 @@ async def main(args, argv):
         )
         return 1
 
-    code_dir = mrva_repo_dir / repo["code_dir"]
     sarif_data = json.load(args.mrva_sarif_file.open())
     results = [CodeQLResult(r) for r in sarif_data["runs"][0]["results"]]
     artifacts = [CodeQLArtifact(a) for a in sarif_data["runs"][0]["artifacts"]]
@@ -118,7 +117,7 @@ async def main(args, argv):
     empty_line = ""
     output = []
     for path, results, lines in path_results_lines:
-        output.append(color(BOLD_RED, code_dir / path))
+        output.append(color(BOLD_RED, path))
         output.append(empty_line)
 
         for result, result_lines in zip(results, lines, strict=True):
