@@ -43,6 +43,7 @@ async def main(args, argv):
             "analyze",
             "--format",
             "sarif-latest",
+            "--sarif-add-file-contents",
             "--output",
             output_path,
             *argv,

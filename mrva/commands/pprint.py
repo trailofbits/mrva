@@ -30,30 +30,44 @@ class CodeQLResult:
         return self.result["message"]["text"]
 
     @property
+    def physical_location(self):
+        return self.result["locations"][0]["physicalLocation"]
+
+    @property
     def path(self):
-        return self.result["locations"][0]["physicalLocation"]["artifactLocation"][
-            "uri"
-        ]
+        return self.physical_location["artifactLocation"]["uri"]
 
     @property
     def start_line(self):
-        return self.result["locations"][0]["physicalLocation"]["region"]["startLine"]
+        return self.physical_location["region"]["startLine"]
 
     @property
     def end_line(self):
-        return self.result["locations"][0]["physicalLocation"]["region"].get(
-            "endLine",
-            self.result["locations"][0]["physicalLocation"]["region"]["startLine"],
-        )
+        return self.physical_location["region"].get("endLine", self.start_line)
 
 
-def get_path_lines(path, results, context):
-    with path.open() as fd:
-        lines = [line.rstrip("\n") for line in fd.readlines()]
+class CodeQLArtifact:
+    def __init__(self, artifact):
+        self.artifact = artifact
+
+    @property
+    def path(self):
+        return self.artifact["location"]["uri"]
+
+    @property
+    def contents(self):
+        return self.artifact["contents"]["text"]
+
+
+def get_path_lines(artifact, results, context):
+    if not artifact:
+        return ""
 
     def line_slice(start, end):
         # -1 for 0-based indexing
         return slice(max(start - context.before - 1, 0), end + context.after)
+
+    lines = artifact.contents.split("\n")
 
     return (lines[line_slice(result.start_line, result.end_line)] for result in results)
 
@@ -77,6 +91,8 @@ async def main(args, argv):
     code_dir = mrva_repo_dir / repo["code_dir"]
     sarif_data = json.load(args.mrva_sarif_file.open())
     results = [CodeQLResult(r) for r in sarif_data["runs"][0]["results"]]
+    artifacts = [CodeQLArtifact(a) for a in sarif_data["runs"][0]["artifacts"]]
+    path_artifacts = {a.path: a for a in artifacts}
     path_rule_groups = {
         path_rule: list(group)
         for path_rule, group in itertools.groupby(
@@ -95,7 +111,7 @@ async def main(args, argv):
         )
     )
     path_results_lines = [
-        (path, results, get_path_lines(code_dir / path, results, context))
+        (path, results, get_path_lines(path_artifacts[path], results, context))
         for (path, _), results in path_rule_groups.items()
     ]
 
