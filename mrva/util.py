@@ -16,3 +16,7 @@ def partition(iterable, pred):
         else:
             l2.append(i)
     return l1, l2
+
+
+def sorted_groupby(iterable, key):
+    return itertools.groupby(sorted(iterable, key=key), key=key)

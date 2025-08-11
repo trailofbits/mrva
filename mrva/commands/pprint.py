@@ -1,8 +1,9 @@
 import collections
-import itertools
 import json
 import logging
 import textwrap
+
+from mrva import util
 
 logger = logging.getLogger(__name__)
 
@@ -108,9 +109,8 @@ async def main(args, argv):
     path_artifacts = {a.path: a for a in artifacts}
     path_rule_groups = {
         path_rule: list(group)
-        for path_rule, group in itertools.groupby(
-            sorted(results, key=lambda r: (r.path, r.rule_id)),
-            key=lambda r: (r.path, r.rule_id),
+        for path_rule, group in util.sorted_groupby(
+            results, lambda r: (r.path, r.rule_id)
         )
     }
 
