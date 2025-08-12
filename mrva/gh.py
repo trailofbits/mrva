@@ -116,10 +116,17 @@ class Client:
         )
 
     async def search_repos(self, query, limit=0):
-        per_page = 100 if limit == 0 or limit > 100 else limit
+        if limit == 0 or limit > 100:
+            # GitHub API endpoint max
+            per_page = 100
+        elif limit < 30:
+            # GitHub API endpoint min
+            per_page = 30
+        else:
+            per_page = limit
 
         # https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-repositories
-        return [
+        repos = [
             repo
             async for page in self._paginated_get(
                 "/search/repositories",
@@ -133,6 +140,10 @@ class Client:
             )
             for repo in page.json()["items"]
         ]
+        if len(repos) > limit:
+            repos = repos[:limit]
+
+        return repos
 
     async def get_repo(self, owner, repo):
         # https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository
