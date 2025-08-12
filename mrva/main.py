@@ -196,13 +196,13 @@ def parse_args():
         default=os.getcwd(),
         help="Queries to execute, passed to CodeQL like [<query|dir|suite|pack>...]"
     )
-    filter_group = analyze_parser.add_mutually_exclusive_group(required=False)
-    filter_group.add_argument(
+    analyze_filter_group = analyze_parser.add_mutually_exclusive_group(required=False)
+    analyze_filter_group.add_argument(
         "--select",
         action="append",
         help="Select CodeQL databases that contain these mrva names"
     )
-    filter_group.add_argument(
+    analyze_filter_group.add_argument(
         "--ignore",
         action="append",
         help="Ignore CodeQL databases that contain these mrva names"
@@ -213,9 +213,21 @@ def parse_args():
         help="Output SARIF analysis results"
     )
     pprint_parser.add_argument(
-        "mrva_sarif_file",
+        "mrva_dir",
         type=pathlib.Path,
-        help="SARIF output file from analyze"
+        default=pathlib.Path.cwd(),
+        help="Directory containing CodeQL SARIF results"
+    )
+    pprint_filter_group = pprint_parser.add_mutually_exclusive_group(required=False)
+    pprint_filter_group.add_argument(
+        "--select",
+        action="append",
+        help="Select CodeQL SARIF results that contain these mrva names"
+    )
+    pprint_filter_group.add_argument(
+        "--ignore",
+        action="append",
+        help="Ignore CodeQL SARIF results that contain these mrva names"
     )
     context_group = pprint_parser.add_mutually_exclusive_group(required=False)
     context_group.add_argument(

@@ -88,31 +88,29 @@ def get_path_lines(artifact, results, context):
 
 
 async def main(args, argv):
-    mrva_repo_dir = args.mrva_sarif_file.parent
-    mrva_dir = mrva_repo_dir.parent
-    config_file = mrva_dir / "mrva-config.json"
-    config = json.load(config_file.open())
+    config_path = args.mrva_dir / "mrva-config.json"
+    config = json.load(config_path.open())
+    logger.info("Pprinting mrva directory created at %s", config["created"])
 
-    repo = next(
-        (r for r in config["repos"] if r.get("mrva_name") == mrva_repo_dir.name),
-        None,
-    )
-    if repo is None:
-        logger.error(
-            "Could not find config repository with name %s", mrva_repo_dir.name
-        )
-        return 1
+    analyzable_repos = [r for r in config["repos"] if r["success"]]
+    logger.info("Found %d analyzable repositories", len(analyzable_repos))
 
-    sarif_data = json.load(args.mrva_sarif_file.open())
-    results = [CodeQLResult(r) for r in sarif_data["runs"][0]["results"]]
-    artifacts = [CodeQLArtifact(a) for a in sarif_data["runs"][0]["artifacts"]]
-    path_artifacts = {a.path: a for a in artifacts}
-    path_rule_groups = {
-        path_rule: list(group)
-        for path_rule, group in util.sorted_groupby(
-            results, lambda r: (r.path, r.rule_id)
+    if args.select:
+        kept, ignored = util.partition(
+            analyzable_repos,
+            lambda r: any(term in r["mrva_name"] for term in args.select),
         )
-    }
+        logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
+        repos = kept
+    elif args.ignore:
+        kept, ignored = util.partition(
+            analyzable_repos,
+            lambda r: any(term not in r["mrva_name"] for term in args.ignore),
+        )
+        logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
+        repos = kept
+    else:
+        repos = analyzable_repos
 
     context = (
         Context(before=0, after=args.after_context)
@@ -123,49 +121,76 @@ async def main(args, argv):
             else Context(before=args.context, after=args.context)
         )
     )
-    path_results_lines = [
-        (path, results, get_path_lines(path_artifacts[path], results, context))
-        for (path, _), results in path_rule_groups.items()
-    ]
 
+    empty_line = ""
     result_count = 0
     paths = set()
     queries = set()
-    empty_line = ""
-    output = []
 
-    for path, results, lines in path_results_lines:
-        paths.add(path)
-        result_count += len(results)
-        output.append(color(BOLD_RED, path))
-        output.append(empty_line)
+    sarif_repo_paths = [
+        (repo, args.mrva_dir / repo["mrva_name"] / "mrva-output.sarif")
+        for repo in repos
+    ]
 
-        for result, lines in zip(results, lines, strict=True):
-            queries.add(result.rule_id)
-            name = color(BOLD_CYAN, result.rule_id)
-            description = color(BOLD_GREEN, result.message)
-            line_range = f"(ln: {result.start_line}-{result.end_line})"
-            link = permalink(
-                repo["url"],
-                repo["commit"],
-                path,
-                result.start_line,
-                result.end_line,
+    def exists_or_log(repo_path):
+        exists = repo_path[1].exists()
+        if not exists:
+            logger.warning(
+                "Skipping %s, could not find SARIF output", repo_path[0]["mrva_name"]
             )
-            header = f"{name}: {description} {line_range}"
+        return exists
 
-            output.append("  " + header)
-            output.append("  " + link)
+    existing_repo_paths, _ = util.partition(sarif_repo_paths, exists_or_log)
+
+    for repo, path in existing_repo_paths:
+        sarif_data = json.load(path.open())
+        results = [CodeQLResult(r) for r in sarif_data["runs"][0]["results"]]
+        artifacts = [CodeQLArtifact(a) for a in sarif_data["runs"][0]["artifacts"]]
+        path_artifacts = {a.path: a for a in artifacts}
+        path_rule_groups = {
+            path_rule: list(group)
+            for path_rule, group in util.sorted_groupby(
+                results, lambda r: (r.path, r.rule_id)
+            )
+        }
+        path_results_lines = [
+            (path, results, get_path_lines(path_artifacts[path], results, context))
+            for (path, _), results in path_rule_groups.items()
+        ]
+
+        output = []
+        for path, results, lines in path_results_lines:
+            paths.add(path)
+            result_count += len(results)
+            output.append(color(BOLD_RED, path))
             output.append(empty_line)
 
-            if lines:
-                start_line = max(result.start_line - context.before, 1)
-                numbered_lines = number_lines(lines, start_line, indent=4)
-                output.append(numbered_lines)
-                if numbered_lines and numbered_lines[-1] != empty_line:
-                    output.append(empty_line)
+            for result, lines in zip(results, lines, strict=True):
+                queries.add(result.rule_id)
+                name = color(BOLD_CYAN, result.rule_id)
+                description = color(BOLD_GREEN, result.message)
+                line_range = f"(ln: {result.start_line}-{result.end_line})"
+                link = permalink(
+                    repo["url"],
+                    repo["commit"],
+                    path,
+                    result.start_line,
+                    result.end_line,
+                )
+                header = f"{name}: {description} {line_range}"
 
-    print("\n".join(output))
+                output.append("  " + header)
+                output.append("  " + link)
+                output.append(empty_line)
+
+                if lines:
+                    start_line = max(result.start_line - context.before, 1)
+                    numbered_lines = number_lines(lines, start_line, indent=4)
+                    output.append(numbered_lines)
+                    if numbered_lines and numbered_lines[-1] != empty_line:
+                        output.append(empty_line)
+
+        print("\n".join(output))
 
     print("Totals")
     print(f"  * Results: {result_count}")
