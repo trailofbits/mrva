@@ -3,6 +3,7 @@ import json
 import logging
 import textwrap
 
+from mrva import types
 from mrva import util
 
 logger = logging.getLogger(__name__)
@@ -88,24 +89,23 @@ def get_path_lines(artifact, results, context):
 
 
 async def main(args, argv):
-    config_path = args.mrva_dir / "mrva-config.json"
-    config = json.load(config_path.open())
-    logger.info("Pprinting mrva directory created at %s", config["created"])
+    config = types.MRVAConfig.from_mrva_dir(args.mrva_dir)
+    logger.info("pprinting mrva directory created at %s", config.created)
 
-    analyzable_repos = [r for r in config["repos"] if r["success"]]
+    analyzable_repos = [r for r in config.repos if r.download_success]
     logger.info("Found %d analyzable repositories", len(analyzable_repos))
 
     if args.select:
         kept, ignored = util.partition(
             analyzable_repos,
-            lambda r: any(term in r["mrva_name"] for term in args.select),
+            lambda r: any(term in r.mrva_name for term in args.select),
         )
         logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
         repos = kept
     elif args.ignore:
         kept, ignored = util.partition(
             analyzable_repos,
-            lambda r: any(term not in r["mrva_name"] for term in args.ignore),
+            lambda r: any(term not in r.mrva_name for term in args.ignore),
         )
         logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
         repos = kept
@@ -127,20 +127,19 @@ async def main(args, argv):
     paths = set()
     queries = set()
 
-    sarif_repo_paths = [
-        (repo, args.mrva_dir / repo["mrva_name"] / "mrva-output.sarif")
-        for repo in repos
+    repo_sarif_paths = [
+        (repo, repo.mrva_dir_sarif_path(args.mrva_dir)) for repo in repos
     ]
 
     def exists_or_log(repo_path):
         exists = repo_path[1].exists()
         if not exists:
             logger.warning(
-                "Skipping %s, could not find SARIF output", repo_path[0]["mrva_name"]
+                "Skipping %s, could not find SARIF output", repo_path[0].mrva_name
             )
         return exists
 
-    existing_repo_paths, _ = util.partition(sarif_repo_paths, exists_or_log)
+    existing_repo_paths, _ = util.partition(repo_sarif_paths, exists_or_log)
 
     for repo, path in existing_repo_paths:
         sarif_data = json.load(path.open())
@@ -171,8 +170,8 @@ async def main(args, argv):
                 description = color(BOLD_GREEN, result.message)
                 line_range = f"(ln: {result.start_line}-{result.end_line})"
                 link = permalink(
-                    repo["url"],
-                    repo["commit"],
+                    repo.url,
+                    repo.commit,
                     path,
                     result.start_line,
                     result.end_line,

@@ -1,6 +1,5 @@
 import asyncio
 import io
-import json
 import logging
 import pathlib
 import time
@@ -9,6 +8,7 @@ import zipfile
 import httpx
 
 from mrva import gh
+from mrva import types
 from mrva import util
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ async def main(args, argv):
             args.download_command,
         )
 
-        output = {"repos": []}
+        mrva_repos = []
         all_success = True
 
         # Batch download requests to avoid this weird bug:
@@ -114,21 +114,19 @@ async def main(args, argv):
             )
 
             zipped = zip(batch, mrva_info, strict=True)
-            for repo, (success, mrva_name, db_dir, commit) in zipped:
-                repo_output = {
-                    "url": repo["html_url"],
-                    "success": success,
-                }
-                if success:
-                    repo_output["mrva_name"] = mrva_name
-                    repo_output["db_dir"] = db_dir
-                    repo_output["commit"] = commit
+            for repo, (download_success, mrva_name, db_dir, commit) in zipped:
+                mrva_repo = types.MRVARepo(
+                    url=repo["html_url"],
+                    download_success=download_success,
+                    mrva_name=mrva_name,
+                    db_dir=db_dir,
+                    commit=commit,
+                )
+                mrva_repos.append(mrva_repo)
+                all_success &= download_success
 
-                output["repos"].append(repo_output)
-                all_success &= success
+        created = int(time.time())
+        config = types.MRVAConfig(created=created, repos=mrva_repos)
+        config.to_mrva_dir(args.mrva_dir)
 
-        output["created"] = int(time.time())
-        config_path = args.mrva_dir / "mrva-config.json"
-        json.dump(output, config_path.open("w"), indent=4)
-
-    return 0 if success else 1
+    return 0 if all_success else 1
