@@ -92,25 +92,10 @@ async def main(args, argv):
     config = types.MRVAConfig.from_mrva_dir(args.mrva_dir)
     logger.info("pprinting mrva directory created at %s", config.created)
 
-    analyzable_repos = [r for r in config.repos if r.download_success]
-    logger.info("Found %d analyzable repositories", len(analyzable_repos))
-
-    if args.select:
-        kept, ignored = util.partition(
-            analyzable_repos,
-            lambda r: any(term in r.mrva_name for term in args.select),
-        )
-        logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
-        repos = kept
-    elif args.ignore:
-        kept, ignored = util.partition(
-            analyzable_repos,
-            lambda r: any(term not in r.mrva_name for term in args.ignore),
-        )
-        logger.info("Kept %d repositories, ignored %d", len(kept), len(ignored))
-        repos = kept
-    else:
-        repos = analyzable_repos
+    kept, discarded = config.analyzable_repos(args.select, args.ignore)
+    logger.info(
+        "Found %d analyzable repositories, discarded %d", len(kept), len(discarded)
+    )
 
     context = (
         Context(before=0, after=args.after_context)
@@ -128,7 +113,7 @@ async def main(args, argv):
     queries = set()
 
     repo_sarif_paths = [
-        (repo, repo.mrva_dir_sarif_path(args.mrva_dir)) for repo in repos
+        (repo, repo.mrva_dir_sarif_path(args.mrva_dir)) for repo in kept
     ]
 
     def exists_or_log(repo_path):

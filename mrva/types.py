@@ -1,6 +1,8 @@
 import dataclasses
 import json
 
+from mrva import util
+
 MRVA_CONFIG_FILENAME = "mrva-config.json"
 MRVA_REPO_SARIF_FILENAME = "mrva-output.sarif"
 
@@ -36,3 +38,26 @@ class MRVAConfig:
         config_path = mrva_dir / MRVA_CONFIG_FILENAME
         config_dict = dataclasses.asdict(self)
         json.dump(config_dict, config_path.open("w"), indent=4)
+
+    def analyzable_repos(self, select=None, ignore=None):
+        if select and ignore:
+            raise Exception("Cannot specify 'select' and 'ignore' at the same time")
+
+        if select is None:
+            select = []
+        elif ignore is None:
+            ignore = []
+
+        # fmt: off
+        predicate = (
+            lambda r: r.download_success and any(
+                term in r.mrva_name for term in select
+            ) if select
+            else lambda r: r.download_success and any(
+                term not in r.mrva_name for term in ignore
+            ) if ignore
+            else lambda r: r.download_success
+        )
+        # fmt: on
+
+        return util.partition(self.repos, predicate)
