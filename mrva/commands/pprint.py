@@ -15,7 +15,12 @@ Context = collections.namedtuple("Context", ["before", "after"])
 
 
 def permalink(url, commit, path, start_line, end_line):
-    return f"{url}/blob/{commit[:7]}/{path}#L{start_line}-L{end_line}"
+    # This may eventually need to be adjusted or configurable. A short hash
+    # may not uniquely identify a commit in repos with many commits.
+    # https://github.com/desktop/desktop/issues/6662
+    hash_size = 8
+
+    return f"{url}/blob/{commit[:hash_size]}/{path}#L{start_line}-L{end_line}"
 
 
 def color(color, s):
@@ -104,7 +109,8 @@ async def main(args, argv):
                     if numbered_lines and numbered_lines[-1] != empty_line:
                         output.append(empty_line)
 
-        print("\n".join(output))
+        if output:
+            print("\n".join(output))
 
     print("Totals")
     print(f"  * Results: {result_count}")

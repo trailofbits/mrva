@@ -111,8 +111,8 @@ class SARIFOutput:
 
     @property
     def results(self):
-        for i in self.first_run["results"]:
-            yield SARIFResult(i)
+        for r in self.first_run["results"]:
+            yield SARIFResult(r)
 
     def result_lines(self, result, context):
         artifact = self.first_run["artifacts"][result.artifact_index]
