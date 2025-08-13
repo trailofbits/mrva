@@ -61,3 +61,71 @@ class MRVAConfig:
         # fmt: on
 
         return util.partition(self.repos, predicate)
+
+
+class SARIFResult:
+    def __init__(self, result):
+        self.result = result
+
+    @property
+    def rule_id(self):
+        return self.result["rule"]["id"]
+
+    @property
+    def message(self):
+        return self.result["message"]["text"]
+
+    @property
+    def physical_location(self):
+        return self.result["locations"][0]["physicalLocation"]
+
+    @property
+    def path(self):
+        return self.physical_location["artifactLocation"]["uri"]
+
+    @property
+    def artifact_index(self):
+        return self.physical_location["artifactLocation"]["index"]
+
+    @property
+    def start_line(self):
+        return self.physical_location["region"]["startLine"]
+
+    @property
+    def end_line(self):
+        return self.physical_location["region"].get("endLine", self.start_line)
+
+
+class SARIFOutput:
+    def __init__(self, output):
+        self.output = output
+
+    @classmethod
+    def from_path(cls, path):
+        return cls(json.load(path.open()))
+
+    @property
+    def first_run(self):
+        # Assume we only have a single run
+        return self.output["runs"][0]
+
+    @property
+    def results(self):
+        for i in self.first_run["results"]:
+            yield SARIFResult(i)
+
+    def result_lines(self, result, context):
+        artifact = self.first_run["artifacts"][result.artifact_index]
+
+        # --sarif-add-file-contents provides this data
+        contents = artifact.get("contents", {}).get("text", "")
+        if not contents:
+            return []
+
+        lines = contents.split("\n")
+
+        # -1 for 0-based indexing
+        start = max(result.start_line - context.before - 1, 0)
+        end = result.end_line + context.after
+
+        return lines[start:end]

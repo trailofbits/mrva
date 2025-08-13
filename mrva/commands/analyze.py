@@ -32,7 +32,7 @@ async def main(args, argv):
             output_path,
             *argv,
             "--",
-            str(db_dir),
+            db_dir,
             args.queries,
         ]
 
