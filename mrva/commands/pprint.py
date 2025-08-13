@@ -1,7 +1,6 @@
 import collections
 import json
 import logging
-import textwrap
 
 from mrva import types
 from mrva import util
@@ -14,14 +13,6 @@ BOLD_CYAN = "\033[1;36m"
 END = "\033[0m"
 
 Context = collections.namedtuple("Context", ["before", "after"])
-
-
-def number_lines(lines, start=0, indent=0):
-    left_align = textwrap.dedent("\n".join(lines))
-    numbered_lines = [
-        f"{i + start} {line}" for i, line in enumerate(left_align.split("\n"))
-    ]
-    return textwrap.indent("\n".join(numbered_lines), " " * indent)
 
 
 def permalink(url, commit, path, start_line, end_line):
@@ -169,7 +160,7 @@ async def main(args, argv):
 
                 if lines:
                     start_line = max(result.start_line - context.before, 1)
-                    numbered_lines = number_lines(lines, start_line, indent=4)
+                    numbered_lines = util.number_lines(lines, start_line, indent=4)
                     output.append(numbered_lines)
                     if numbered_lines and numbered_lines[-1] != empty_line:
                         output.append(empty_line)
