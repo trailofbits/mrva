@@ -1,13 +1,26 @@
 [project]
 name = "mrva"
 version = "0.5.0"
-description = "A CLI tool for running CodeQL multi-repo variant analyses"
+description = "A CLI tool for running CodeQL multi-repo variant analysis"
 license = "AGPL-3.0"
 readme = "README.md"
 requires-python = ">=3.9,<4"
 authors = []
 dependencies = [
     "httpx",
+]
+classifiers = [
+    "Environment :: Console",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
 ]
 
 [project.urls]
