@@ -1,6 +1,6 @@
 # mrva
 
-`mrva` is a CLI tool for running CodeQL multi-repo variant analysis. You can download existing CodeQL databases from the GitHub API, run variant analyses, and view results all from your local machine. This tool was inspired by the VSCode [CodeQL extension](https://github.com/github/vscode-codeql), but instead runs as a standalone CLI tool.
+`mrva` is a CLI tool for running CodeQL [multi-repo variant analysis](https://docs.github.com/en/code-security/codeql-for-vs-code/getting-started-with-codeql-for-vs-code/running-codeql-queries-at-scale-with-multi-repository-variant-analysis). You can download existing CodeQL databases from the GitHub API, run variant analyses, and view results all from your local machine. This tool was inspired by the VSCode [CodeQL extension](https://github.com/github/vscode-codeql), but instead runs as a standalone CLI tool.
 
 Table of contents:
 
