@@ -1,4 +1,3 @@
-import json
 import logging
 import subprocess
 import sys
@@ -56,8 +55,8 @@ async def main(args, argv):
             )
             continue
 
-        output = json.load(output_path.open())
-        repo_result_count = len(output["runs"][0]["results"])
+        output = types.SARIFOutput.from_path(output_path)
+        repo_result_count = len(output.results)
         total_results += repo_result_count
         logger.info("Found %d results for %s", repo_result_count, repo.mrva_name)
 
