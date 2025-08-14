@@ -7,7 +7,7 @@ MRVA_CONFIG_FILENAME = "mrva-config.json"
 MRVA_REPO_SARIF_FILENAME = "mrva-output.sarif"
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
+@dataclasses.dataclass(frozen=True)
 class MRVARepo:
     url: str
     download_success: bool
@@ -22,7 +22,7 @@ class MRVARepo:
         return mrva_dir / self.mrva_name / self.db_dir
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
+@dataclasses.dataclass(frozen=True)
 class MRVAConfig:
     created: int
     repos: list[MRVARepo]
