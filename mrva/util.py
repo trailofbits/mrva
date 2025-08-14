@@ -23,9 +23,12 @@ def sorted_groupby(iterable, key):
     return itertools.groupby(sorted(iterable, key=key), key=key)
 
 
-def number_lines(lines, start=0, indent=0):
-    left_align = textwrap.dedent("\n".join(lines))
+def number_lines(lines, start=1, indent=0):
+    if not lines:
+        return ""
+
+    dedented_lines = textwrap.dedent("\n".join(lines)).split("\n")
     numbered_lines = [
-        f"{i} {line}" for i, line in enumerate(left_align.split("\n"), start=start)
+        f"{i} {line}" for i, line in enumerate(dedented_lines, start=start)
     ]
     return textwrap.indent("\n".join(numbered_lines), " " * indent)
