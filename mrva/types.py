@@ -95,6 +95,11 @@ class SARIFResult:
     def end_line(self):
         return self.physical_location["region"].get("endLine", self.start_line)
 
+    @property
+    def code_flows(self):
+        # Assuming only path-problem query kinds have codeFlows
+        return self.result.get("codeFlows", [])
+
 
 class SARIFOutput:
     def __init__(self, output):

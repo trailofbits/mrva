@@ -218,6 +218,11 @@ def parse_args():
         default=pathlib.Path.cwd(),
         help="Directory containing CodeQL SARIF results"
     )
+    pprint_parser.add_argument(
+        "--no-flows",
+        action="store_true",
+        help="Disable printing code flows",
+    )
     pprint_filter_group = pprint_parser.add_mutually_exclusive_group(required=False)
     pprint_filter_group.add_argument(
         "--select",

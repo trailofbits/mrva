@@ -66,29 +66,24 @@ def test_sorted_groupby_unsorted_input():
 
 def test_number_lines_empty():
     result = util.number_lines([])
-    assert result == ""
+    assert result == []
 
 
 def test_number_lines_single_line():
     result = util.number_lines(["hello"])
-    assert result == "1 hello"
+    assert result == [(1, "hello")]
 
 
 def test_number_lines_multiple_lines():
     result = util.number_lines(["hello", "world"])
-    assert result == "1 hello\n2 world"
+    assert result == [(1, "hello"), (2, "world")]
 
 
 def test_number_lines_with_start():
     result = util.number_lines(["hello", "world"], start=10)
-    assert result == "10 hello\n11 world"
+    assert result == [(10, "hello"), (11, "world")]
 
 
 def test_number_lines_with_indent():
-    result = util.number_lines(["hello", "world"], indent=4)
-    assert result == "    1 hello\n    2 world"
-
-
-def test_number_lines_with_mixed_indentation():
-    result = util.number_lines(["def f():", "    print('Hi')"], indent=2)
-    assert result == "  1 def f():\n  2     print('Hi')"
+    result = util.number_lines(["  hello", "    world"])
+    assert result == [(1, "hello"), (2, "  world")]

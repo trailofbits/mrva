@@ -1,6 +1,8 @@
 import collections
 import logging
 
+import jinja2
+
 from mrva import types
 from mrva import util
 
@@ -27,34 +29,21 @@ def color(color, s):
     return f"{color}{s}{END}"
 
 
-def result_to_output_lines(repo, sarif_output, sarif_result, context):
-    output_lines = []
-    empty_line = ""
-    name = color(BOLD_CYAN, sarif_result.message)
-    description = color(BOLD_GREEN, sarif_result.path)
-    line_range = f"(ln: {sarif_result.start_line}-{sarif_result.end_line})"
-    link = permalink(
-        repo.url,
-        repo.commit,
-        sarif_result.path,
-        sarif_result.start_line,
-        sarif_result.end_line,
-    )
-    header = f"{name}: {description} {line_range}"
+NO_FLOW_TEMPLATE = """
+{% for tr in trs %}
+{{ tr["rule_id"] }}
 
-    output_lines.append("  " + header)
-    output_lines.append("  " + link)
-    output_lines.append(empty_line)
+{% for r in tr["results"] %}
+  {{ r["message"] }}: {{ r["path"] }} (ln: {{ r["start_line"] }}-{{ r["end_line"] }})
+  {{ r["link"] }}
 
-    code_lines = sarif_output.result_lines(sarif_result, context)
-    if code_lines:
-        # 1-based indexing
-        start_line = max(sarif_result.start_line - context.before, 1)
-        numbered_lines = util.number_lines(code_lines, start_line, indent=4)
-        output_lines.append(numbered_lines)
-        output_lines.append(empty_line)
+  {% for line_no, line in r["lines"] %}
+    {{ line_no }} {{ line }}
+  {% endfor %}
 
-    return output_lines
+{% endfor %}
+{% endfor %}
+""".strip()
 
 
 async def main(args, argv):
@@ -76,11 +65,6 @@ async def main(args, argv):
         )
     )
 
-    empty_line = ""
-    result_count = 0
-    paths = set()
-    queries = set()
-
     repo_sarif_paths = [
         (repo, repo.mrva_dir_sarif_path(args.mrva_dir)) for repo in kept
     ]
@@ -95,6 +79,7 @@ async def main(args, argv):
         return exists
 
     existing_repo_paths, _ = util.partition(repo_sarif_paths, exists_or_log)
+    environment = jinja2.Environment(trim_blocks=True)
 
     for repo, sarif_path in existing_repo_paths:
         sarif_output = types.SARIFOutput.from_path(sarif_path)
@@ -105,27 +90,36 @@ async def main(args, argv):
             )
         }
 
-        output = []
-        for rule_id, results in rule_groups.items():
-            result_count += len(results)
-            paths.update({r.path for r in results})
-            queries.add(rule_id)
-
-            output.append(color(BOLD_RED, rule_id))
-            output.append(empty_line)
-            output.extend(
-                util.flatten(
-                    result_to_output_lines(repo, sarif_output, result, context)
+        trs = [
+            {
+                "rule_id": color(BOLD_RED, rule_id),
+                "results": [
+                    {
+                        "message": color(BOLD_CYAN, result.message),
+                        "path": color(BOLD_GREEN, result.path),
+                        "start_line": result.start_line,
+                        "end_line": result.end_line,
+                        "link": permalink(
+                            repo.url,
+                            repo.commit,
+                            result.path,
+                            result.start_line,
+                            result.end_line,
+                        ),
+                        "lines": util.number_lines(
+                            sarif_output.result_lines(result, context),
+                            # 1-based indexing
+                            start=max(result.start_line - context.before, 1),
+                        ),
+                    }
                     for result in results
-                )
-            )
+                ],
+            }
+            for rule_id, results in rule_groups.items()
+        ]
 
-        if output:
-            print("\n".join(output))
-
-    print("Totals")
-    print(f"  * Results: {result_count}")
-    print(f"  * Paths: {len(paths)}")
-    print(f"  * Queries: {len(queries)}")
+        if trs:
+            template = environment.from_string(NO_FLOW_TEMPLATE)
+            print(template.render(trs=trs))
 
     return 0
