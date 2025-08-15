@@ -9,6 +9,10 @@ def batched(iterable, n):
         yield batch
 
 
+def flatten(iterables):
+    return itertools.chain.from_iterable(iterables)
+
+
 def partition(iterable, pred):
     l1, l2 = [], []
     for i in iterable:

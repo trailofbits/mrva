@@ -27,6 +27,36 @@ def color(color, s):
     return f"{color}{s}{END}"
 
 
+def result_to_output_lines(repo, sarif_output, sarif_result, context):
+    output_lines = []
+    empty_line = ""
+    name = color(BOLD_CYAN, sarif_result.message)
+    description = color(BOLD_GREEN, sarif_result.path)
+    line_range = f"(ln: {sarif_result.start_line}-{sarif_result.end_line})"
+    link = permalink(
+        repo.url,
+        repo.commit,
+        sarif_result.path,
+        sarif_result.start_line,
+        sarif_result.end_line,
+    )
+    header = f"{name}: {description} {line_range}"
+
+    output_lines.append("  " + header)
+    output_lines.append("  " + link)
+    output_lines.append(empty_line)
+
+    code_lines = sarif_output.result_lines(sarif_result, context)
+    if code_lines:
+        # 1-based indexing
+        start_line = max(sarif_result.start_line - context.before, 1)
+        numbered_lines = util.number_lines(code_lines, start_line, indent=4)
+        output_lines.append(numbered_lines)
+        output_lines.append(empty_line)
+
+    return output_lines
+
+
 async def main(args, argv):
     config = types.MRVAConfig.from_mrva_dir(args.mrva_dir)
     logger.info("pprinting mrva directory created at %s", config.created)
@@ -68,46 +98,27 @@ async def main(args, argv):
 
     for repo, sarif_path in existing_repo_paths:
         sarif_output = types.SARIFOutput.from_path(sarif_path)
-        path_rule_groups = {
-            path_rule: list(group)
-            for path_rule, group in util.sorted_groupby(
-                sarif_output.results, lambda r: (r.path, r.rule_id)
+        rule_groups = {
+            rule_id: list(group)
+            for rule_id, group in util.sorted_groupby(
+                sarif_output.results, lambda r: r.rule_id
             )
         }
 
         output = []
-        for (path, rule_id), results in path_rule_groups.items():
-            paths.add(path)
+        for rule_id, results in rule_groups.items():
             result_count += len(results)
-            output.append(color(BOLD_RED, path))
+            paths.update({r.path for r in results})
+            queries.add(rule_id)
+
+            output.append(color(BOLD_RED, rule_id))
             output.append(empty_line)
-
-            for result in results:
-                queries.add(rule_id)
-                name = color(BOLD_CYAN, rule_id)
-                description = color(BOLD_GREEN, result.message)
-                line_range = f"(ln: {result.start_line}-{result.end_line})"
-                link = permalink(
-                    repo.url,
-                    repo.commit,
-                    path,
-                    result.start_line,
-                    result.end_line,
+            output.extend(
+                util.flatten(
+                    result_to_output_lines(repo, sarif_output, result, context)
+                    for result in results
                 )
-                header = f"{name}: {description} {line_range}"
-
-                output.append("  " + header)
-                output.append("  " + link)
-                output.append(empty_line)
-
-                lines = sarif_output.result_lines(result, context)
-                if lines:
-                    # 1-based indexing
-                    start_line = max(result.start_line - context.before, 1)
-                    numbered_lines = util.number_lines(lines, start_line, indent=4)
-                    output.append(numbered_lines)
-                    if numbered_lines and numbered_lines[-1] != empty_line:
-                        output.append(empty_line)
+            )
 
         if output:
             print("\n".join(output))
