@@ -20,7 +20,7 @@ OUTPUT_TEMPLATE = """
 {{ tr["rule_id"] }}: {{ tr["message"] }}
 
 {% for loc in tr["locations"] %}
-  {{ loc["path"] }} (ln: {{ loc["start_line"] }}-{{ loc["end_line"] }})
+  {{ loc["path"] }} (ln: {{ loc["start_line"] }}:{{ loc["start_column"] }}:{{ loc["end_line"] }}:{{ loc["end_column"] }})
   {{ loc["link"] }}
 
   {% for line_no, line in loc["lines"] %}
@@ -93,6 +93,8 @@ async def main(args, argv):
                         "path": color(BOLD_GREEN, location.path),
                         "start_line": location.start_line,
                         "end_line": location.end_line,
+                        "start_column": location.start_column,
+                        "end_column": location.end_column,
                         "link": permalink(
                             repo.url,
                             repo.commit,

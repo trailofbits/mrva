@@ -83,6 +83,18 @@ class SARIFLocation:
     def end_line(self):
         return self.location["region"].get("endLine", self.start_line)
 
+    @property
+    def start_column(self):
+        return self.location["region"].get("startColumn", 1)
+
+    @property
+    def end_column(self):
+        # This should default to the end of the line if endColumn is not
+        # present. However, we do not have that information available until
+        # we analyze the file contents and split it into multiple lines. TODO:
+        # improve this to efficiently find the end column - use "$" for now.
+        return self.location["region"].get("endColumn", "$")
+
 
 class SARIFResult:
     def __init__(self, result):
