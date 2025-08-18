@@ -220,7 +220,8 @@ def parse_args():
     )
     pprint_parser.add_argument(
         "--no-flows",
-        action="store_true",
+        dest="flows",
+        action="store_false",
         help="Disable printing code flows",
     )
     pprint_filter_group = pprint_parser.add_mutually_exclusive_group(required=False)

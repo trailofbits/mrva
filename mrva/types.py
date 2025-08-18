@@ -63,6 +63,27 @@ class MRVAConfig:
         return util.partition(self.repos, predicate)
 
 
+class SARIFLocation:
+    def __init__(self, location):
+        self.location = location
+
+    @property
+    def path(self):
+        return self.location["artifactLocation"]["uri"]
+
+    @property
+    def artifact_index(self):
+        return self.location["artifactLocation"]["index"]
+
+    @property
+    def start_line(self):
+        return self.location["region"]["startLine"]
+
+    @property
+    def end_line(self):
+        return self.location["region"].get("endLine", self.start_line)
+
+
 class SARIFResult:
     def __init__(self, result):
         self.result = result
@@ -75,30 +96,22 @@ class SARIFResult:
     def message(self):
         return self.result["message"]["text"]
 
-    @property
-    def physical_location(self):
-        return self.result["locations"][0]["physicalLocation"]
+    def locations(self, flows=True):
+        # Assume only path-problem query kinds have codeFlows
+        has_code_flows = "codeFlows" in self.result
 
-    @property
-    def path(self):
-        return self.physical_location["artifactLocation"]["uri"]
+        if flows and has_code_flows:
+            return [
+                SARIFLocation(location["location"]["physicalLocation"])
+                for cf in self.result["codeFlows"]
+                for tf in cf["threadFlows"]
+                for location in tf["locations"]
+            ]
 
-    @property
-    def artifact_index(self):
-        return self.physical_location["artifactLocation"]["index"]
-
-    @property
-    def start_line(self):
-        return self.physical_location["region"]["startLine"]
-
-    @property
-    def end_line(self):
-        return self.physical_location["region"].get("endLine", self.start_line)
-
-    @property
-    def code_flows(self):
-        # Assuming only path-problem query kinds have codeFlows
-        return self.result.get("codeFlows", [])
+        return [
+            SARIFLocation(location["physicalLocation"])
+            for location in self.result["locations"]
+        ]
 
 
 class SARIFOutput:
@@ -118,7 +131,7 @@ class SARIFOutput:
     def results(self):
         return [SARIFResult(r) for r in self.first_run["results"]]
 
-    def result_lines(self, result, context):
+    def artifact_lines(self, result, context):
         artifact = self.first_run["artifacts"][result.artifact_index]
 
         # --sarif-add-file-contents provides this data
