@@ -1,5 +1,6 @@
 import collections
 import logging
+import sys
 
 import jinja2
 
@@ -31,6 +32,9 @@ OUTPUT_TEMPLATE = """
 {% endfor %}
 """.strip()
 
+ENVIRONMENT = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
+TEMPLATE = ENVIRONMENT.from_string(OUTPUT_TEMPLATE)
+
 
 def permalink(url, commit, path, start_line, end_line):
     # This may eventually need to be adjusted or configurable. A short hash
@@ -45,6 +49,41 @@ def color(color, s):
     return f"{color}{s}{END}"
 
 
+def print_sarif_output(repo, sarif_path, context, flows=True, file=sys.stdout):
+    sarif_output = types.SARIFOutput.from_path(sarif_path)
+    trs = [
+        {
+            "rule_id": color(BOLD_RED, result.rule_id),
+            "message": color(BOLD_CYAN, result.message),
+            "locations": [
+                {
+                    "path": color(BOLD_GREEN, location.path),
+                    "start_line": location.start_line,
+                    "end_line": location.end_line,
+                    "start_column": location.start_column,
+                    "end_column": location.end_column,
+                    "link": permalink(
+                        repo.url,
+                        repo.commit,
+                        location.path,
+                        location.start_line,
+                        location.end_line,
+                    ),
+                    "lines": util.number_lines(
+                        sarif_output.artifact_lines(location, context),
+                        # 1-based indexing (line numbers)
+                        start=max(location.start_line - context.before, 1),
+                    ),
+                }
+                for location in result.locations(flows=flows)
+            ],
+        }
+        for result in sarif_output.results
+    ]
+    if trs:
+        print(TEMPLATE.render(trs=trs), file=file)
+
+
 async def main(args, argv):
     config = types.MRVAConfig.from_mrva_dir(args.mrva_dir)
     logger.info("pprinting mrva directory created at %s", config.created)
@@ -53,9 +92,6 @@ async def main(args, argv):
     logger.info(
         "Found %d analyzable repositories, discarded %d", len(kept), len(discarded)
     )
-
-    environment = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
-    template = environment.from_string(OUTPUT_TEMPLATE)
 
     context = (
         Context(before=0, after=args.after_context)
@@ -70,50 +106,10 @@ async def main(args, argv):
     repo_sarif_paths = [
         (repo, repo.mrva_dir_sarif_path(args.mrva_dir)) for repo in kept
     ]
-
-    def exists_or_log(repo_sarif_path):
-        exists = repo_sarif_path[1].exists()
-        if not exists:
-            logger.warning(
-                "Skipping %s, could not find SARIF output",
-                repo_sarif_path[0].mrva_name,
-            )
-        return exists
-
-    existing_repo_paths, _ = util.partition(repo_sarif_paths, exists_or_log)
-
-    for repo, sarif_path in existing_repo_paths:
-        sarif_output = types.SARIFOutput.from_path(sarif_path)
-        trs = [
-            {
-                "rule_id": color(BOLD_RED, result.rule_id),
-                "message": color(BOLD_CYAN, result.message),
-                "locations": [
-                    {
-                        "path": color(BOLD_GREEN, location.path),
-                        "start_line": location.start_line,
-                        "end_line": location.end_line,
-                        "start_column": location.start_column,
-                        "end_column": location.end_column,
-                        "link": permalink(
-                            repo.url,
-                            repo.commit,
-                            location.path,
-                            location.start_line,
-                            location.end_line,
-                        ),
-                        "lines": util.number_lines(
-                            sarif_output.artifact_lines(location, context),
-                            # 1-based indexing (line numbers)
-                            start=max(location.start_line - context.before, 1),
-                        ),
-                    }
-                    for location in result.locations(flows=args.flows)
-                ],
-            }
-            for result in sarif_output.results
-        ]
-        if trs:
-            print(template.render(trs=trs))
+    for repo, sarif_path in repo_sarif_paths:
+        if sarif_path.exists():
+            print_sarif_output(repo, sarif_path, context, flows=args.flows)
+        else:
+            logger.warning("Skipping %s, could not find SARIF output", repo.mrva_name)
 
     return 0
