@@ -20,7 +20,7 @@ OUTPUT_TEMPLATE = """
 {{ tr["rule_id"] }}: {{ tr["message"] }}
 
 {% for loc in tr["locations"] %}
-  {{ loc["path"] }} (ln: {{ loc["start_line"] }}:{{ loc["start_column"] }}:{{ loc["end_line"] }}:{{ loc["end_column"] }})
+  {{ loc["path"] }} (ln: {{ loc["start_line"] }}:{{ loc["end_line"] }} col: {{ loc["start_column"] }}:{{ loc["end_column"] }})
   {{ loc["link"] }}
 
   {% for line_no, line in loc["lines"] %}
