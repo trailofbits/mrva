@@ -49,7 +49,11 @@ def color(color, s):
     return f"{color}{s}{END}"
 
 
-def print_sarif_output(repo, sarif_path, context, flows=True, file=sys.stdout):
+def print_sarif_output(repo, sarif_path, context, flows=True, file=None):
+    if file is None:
+        # https://github.com/pytest-dev/pytest/issues/5997
+        file = sys.stdout
+
     sarif_output = types.SARIFOutput.from_path(sarif_path)
     trs = [
         {

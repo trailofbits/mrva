@@ -1,5 +1,3 @@
-import io
-
 from mrva import commands
 from mrva import types
 
@@ -13,13 +11,9 @@ REPO = types.MRVARepo(
 CONTEXT = commands.pprint.Context(before=0, after=0)
 
 
-def test_pprint_problem_query_no_contents(problem_query_no_contents):
-    capture = io.StringIO()
-
-    commands.pprint.print_sarif_output(
-        REPO, problem_query_no_contents, CONTEXT, file=capture
-    )
-    result = capture.getvalue()
+def test_pprint_problem_query_no_contents(capsys, problem_query_no_contents):
+    commands.pprint.print_sarif_output(REPO, problem_query_no_contents, CONTEXT)
+    result = capsys.readouterr()
     expected = [
         "https://github.com/someorg/somerepo/blob/ffffffff/code.py#L1-L1",
         "https://github.com/someorg/somerepo/blob/ffffffff/code.py#L5-L5",
@@ -27,16 +21,12 @@ def test_pprint_problem_query_no_contents(problem_query_no_contents):
     ]
 
     for e in expected:
-        assert e in result
+        assert e in result.out
 
 
-def test_pprint_problem_query_with_contents(problem_query_with_contents):
-    capture = io.StringIO()
-
-    commands.pprint.print_sarif_output(
-        REPO, problem_query_with_contents, CONTEXT, file=capture
-    )
-    result = capture.getvalue()
+def test_pprint_problem_query_with_contents(capsys, problem_query_with_contents):
+    commands.pprint.print_sarif_output(REPO, problem_query_with_contents, CONTEXT)
+    result = capsys.readouterr()
     expected = [
         "1 class A:",
         "5 class B:",
@@ -44,16 +34,12 @@ def test_pprint_problem_query_with_contents(problem_query_with_contents):
     ]
 
     for e in expected:
-        assert e in result
+        assert e in result.out
 
 
-def test_pprint_path_problem_query_no_contents(path_problem_query_no_contents):
-    capture = io.StringIO()
-
-    commands.pprint.print_sarif_output(
-        REPO, path_problem_query_no_contents, CONTEXT, file=capture
-    )
-    result = capture.getvalue()
+def test_pprint_path_problem_query_no_contents(capsys, path_problem_query_no_contents):
+    commands.pprint.print_sarif_output(REPO, path_problem_query_no_contents, CONTEXT)
+    result = capsys.readouterr()
     expected = [
         "https://github.com/someorg/somerepo/blob/ffffffff/code.py#L4-L4",
         "https://github.com/someorg/somerepo/blob/ffffffff/code.py#L6-L6",
@@ -63,18 +49,17 @@ def test_pprint_path_problem_query_no_contents(path_problem_query_no_contents):
     ]
 
     for e in expected:
-        assert e in result
+        assert e in result.out
 
 
 def test_pprint_path_problem_query_with_contents_no_flows(
+    capsys,
     path_problem_query_with_contents,
 ):
-    capture = io.StringIO()
-
     commands.pprint.print_sarif_output(
-        REPO, path_problem_query_with_contents, CONTEXT, flows=False, file=capture
+        REPO, path_problem_query_with_contents, CONTEXT, flows=False
     )
-    result = capture.getvalue()
+    result = capsys.readouterr()
     expected = [
         "7 fd1 = os.open(path1)",
         "12 fd2 = os.open(path2)",
@@ -86,7 +71,7 @@ def test_pprint_path_problem_query_with_contents_no_flows(
     ]
 
     for e in expected:
-        assert e in result
+        assert e in result.out
 
     for ne in not_expected:
-        assert ne not in result
+        assert ne not in result.out
