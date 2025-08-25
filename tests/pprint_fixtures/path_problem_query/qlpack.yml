@@ -1,0 +1,8 @@
+---
+name: test
+authors: Test
+version: 0.0.1
+library: false
+extractor: python
+dependencies:
+  codeql/python-all: "*"

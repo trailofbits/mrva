@@ -5,6 +5,8 @@ repos:
     hooks:
       - id: check-yaml
       - id: check-json
+        types: [text]
+        files: \.(json|sarif)$
       - id: check-toml
       - id: check-case-conflict
       - id: end-of-file-fixer
