@@ -101,7 +101,7 @@ def parse_args(args):
         "mrva_dir",
         type=pathlib.Path,
         default=pathlib.Path.cwd(),
-        help="Directory to download CodeQL databases to"
+        help="mrva storage and configuration directory"
     )
 
     download_subparsers = download_parser.add_subparsers(
@@ -188,7 +188,7 @@ def parse_args(args):
         "mrva_dir",
         type=pathlib.Path,
         default=pathlib.Path.cwd(),
-        help="Directory containing CodeQL databases"
+        help="mrva storage and configuration directory"
     )
     analyze_parser.add_argument(
         "queries",
@@ -213,10 +213,15 @@ def parse_args(args):
         help="Output SARIF analysis results"
     )
     pprint_parser.add_argument(
-        "mrva_dir",
+        "target",
         type=pathlib.Path,
         default=pathlib.Path.cwd(),
-        help="Directory containing CodeQL SARIF results"
+        help="mrva storage and configuration directory, or CodeQL SARIF file"
+    )
+    pprint_parser.add_argument(
+        "--repo-url",
+        action="store",
+        help="GitHub repo URL, like https://github.com/<org>/<repo>/blob/<commit>",
     )
     pprint_parser.add_argument(
         "--no-flows",
@@ -265,10 +270,15 @@ def parse_args(args):
         known = p.parse_args(args=args)
         unknown = []
 
-    if known.command in ["download", "analyze", "pprint"]:
+    if known.command in ["download", "analyze"]:
         if not known.mrva_dir.is_dir():
             raise argparse.ArgumentTypeError(
                 f"{known.mrva_dir} is not an existing mrva directory"
+            )
+    elif known.command == "pprint":
+        if not (known.target.is_dir() or known.target.is_file()):
+            raise argparse.ArgumentTypeError(
+                f"{known.target} is not an existing mrva directory or SARIF file"
             )
 
     return known, unknown

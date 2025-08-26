@@ -52,6 +52,96 @@ async def test_pprint_problem_query_with_contents(capsys, problem_query_mrva_dir
         assert e in result.out
 
 
+async def test_pprint_problem_query_no_contents_sarif(
+    capsys, problem_query_no_contents_sarif
+):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--select",
+            "no-contents",
+            "--context",
+            "0",
+            str(problem_query_no_contents_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+    expected = [
+        "(ln: 1:1 col: 1:9)",
+        "(ln: 5:5 col: 1:9)",
+        "(ln: 9:9 col: 1:9)",
+    ]
+    not_expected = [
+        "1 class A:",
+        "5 class B:",
+        "9 class C:",
+    ]
+
+    assert code == 0
+    for e in expected:
+        assert e in result.out
+    for e in not_expected:
+        assert e not in result.out
+
+
+async def test_pprint_problem_query_with_contents_sarif(
+    capsys, problem_query_with_contents_sarif
+):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--select",
+            "with-contents",
+            "--context",
+            "0",
+            str(problem_query_with_contents_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+    expected = [
+        "(ln: 1:1 col: 1:9)",
+        "(ln: 5:5 col: 1:9)",
+        "(ln: 9:9 col: 1:9)",
+        "1 class A:",
+        "5 class B:",
+        "9 class C:",
+    ]
+
+    assert code == 0
+    for e in expected:
+        assert e in result.out
+
+
+async def test_pprint_problem_query_with_contents_repo_url(
+    capsys, problem_query_with_contents_sarif
+):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--select",
+            "with-contents",
+            "--context",
+            "0",
+            "--repo-url",
+            "https://github.com/someorg/somerepo/blog/abcdef",
+            str(problem_query_with_contents_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+    expected = [
+        "https://github.com/someorg/somerepo/blog/abcdef/code.py#L1-L1",
+        "https://github.com/someorg/somerepo/blog/abcdef/code.py#L5-L5",
+        "https://github.com/someorg/somerepo/blog/abcdef/code.py#L9-L9",
+    ]
+
+    assert code == 0
+    for e in expected:
+        assert e in result.out
+
+
 async def test_pprint_path_problem_query_no_contents(
     capsys, path_problem_query_mrva_dir
 ):

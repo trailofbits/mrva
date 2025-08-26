@@ -22,7 +22,9 @@ OUTPUT_TEMPLATE = """
 
 {% for loc in tr["locations"] %}
   {{ loc["path"] }} (ln: {{ loc["start_line"] }}:{{ loc["end_line"] }} col: {{ loc["start_column"] }}:{{ loc["end_column"] }})
+  {% if loc["link"] %}
   {{ loc["link"] }}
+  {% endif %}
 
   {% for line_no, line in loc["lines"] %}
   {{ line_no }} {{ line }}
@@ -36,20 +38,30 @@ ENVIRONMENT = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
 TEMPLATE = ENVIRONMENT.from_string(OUTPUT_TEMPLATE)
 
 
-def permalink(url, commit, path, start_line, end_line):
+def pathlink(gh_url, path, start_line, end_line):
+    if not gh_url:
+        return ""
+
+    return f"{gh_url.rstrip('/')}/{path}#L{start_line}-L{end_line}"
+
+
+def permalink(repo):
+    if not repo:
+        return ""
+
     # This may eventually need to be adjusted or configurable. A short hash
     # may not uniquely identify a commit in repos with many commits.
     # https://github.com/desktop/desktop/issues/6662
     hash_size = 8
 
-    return f"{url}/blob/{commit[:hash_size]}/{path}#L{start_line}-L{end_line}"
+    return f"{repo.url}/blob/{repo.commit[:hash_size]}"
 
 
 def color(color, s):
     return f"{color}{s}{END}"
 
 
-def print_sarif_output(repo, sarif_path, context, flows=True, file=None):
+def print_sarif_output(sarif_path, context, gh_url="", flows=True, file=None):
     if file is None:
         # https://github.com/pytest-dev/pytest/issues/5997
         file = sys.stdout
@@ -66,9 +78,8 @@ def print_sarif_output(repo, sarif_path, context, flows=True, file=None):
                     "end_line": location.end_line,
                     "start_column": location.start_column,
                     "end_column": location.end_column,
-                    "link": permalink(
-                        repo.url,
-                        repo.commit,
+                    "link": pathlink(
+                        gh_url,
                         location.path,
                         location.start_line,
                         location.end_line,
@@ -89,14 +100,6 @@ def print_sarif_output(repo, sarif_path, context, flows=True, file=None):
 
 
 async def main(args, argv):
-    config = types.MRVAConfig.from_mrva_dir(args.mrva_dir)
-    logger.info("pprinting mrva directory created at %s", config.created)
-
-    kept, discarded = config.analyzable_repos(args.select, args.ignore)
-    logger.info(
-        "Found %d analyzable repositories, discarded %d", len(kept), len(discarded)
-    )
-
     context = (
         Context(before=0, after=args.after_context)
         if args.after_context
@@ -107,12 +110,24 @@ async def main(args, argv):
         )
     )
 
-    repo_sarif_paths = [
-        (repo, repo.mrva_dir_sarif_path(args.mrva_dir)) for repo in kept
-    ]
+    if args.target.is_dir():
+        config = types.MRVAConfig.from_mrva_dir(args.target)
+        logger.info("pprinting mrva directory created at %s", config.created)
+        kept, discarded = config.analyzable_repos(args.select, args.ignore)
+        logger.info(
+            "Found %d analyzable repositories, discarded %d", len(kept), len(discarded)
+        )
+        repo_sarif_paths = [
+            (repo, repo.mrva_dir_sarif_path(args.target)) for repo in kept
+        ]
+    else:
+        logger.info("pprinting SARIF file %s", args.target)
+        repo_sarif_paths = [(None, args.target)]
+
     for repo, sarif_path in repo_sarif_paths:
         if sarif_path.exists():
-            print_sarif_output(repo, sarif_path, context, flows=args.flows)
+            gh_url = args.repo_url if args.repo_url else permalink(repo)
+            print_sarif_output(sarif_path, context, gh_url=gh_url, flows=args.flows)
         else:
             logger.warning("Skipping %s, could not find SARIF output", repo.mrva_name)
 
