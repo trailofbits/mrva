@@ -1,0 +1,19 @@
+{
+    "created": 1755014592,
+    "repos": [
+        {
+            "url": "https://github.com/someorg/no-contents",
+            "download_success": true,
+            "mrva_name": "mrva-python-someorg-no-contents",
+            "db_dir": "not-needed",
+            "commit": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        {
+            "url": "https://github.com/someorg/with-contents",
+            "download_success": true,
+            "mrva_name": "mrva-python-someorg-with-contents",
+            "db_dir": "not-needed",
+            "commit": "ffffffffffffffffffffffffffffffffffffffff"
+        }
+    ]
+}

@@ -49,7 +49,7 @@ class EnvDefault(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-def parse_args():
+def parse_args(args):
     # fmt: off
     p = argparse.ArgumentParser(
         description="A CLI for CodeQL multi-repo variant analysis",
@@ -257,25 +257,25 @@ def parse_args():
     )
     # fmt: on
 
-    args, argv = p.parse_known_args()
-    if args.command != "analyze":
+    known, unknown = p.parse_known_args(args=args)
+    if known.command == "analyze":
         # Only analyze supports unknown arguments passed through to another command
-        args = p.parse_args()
-        argv = []
+        unknown = [a for a in unknown if a != "--"]
     else:
-        argv = [a for a in argv if a != "--"]
+        known = p.parse_args(args=args)
+        unknown = []
 
-    if args.command in ["download", "analyze"]:
-        if not args.mrva_dir.is_dir():
+    if known.command in ["download", "analyze", "pprint"]:
+        if not known.mrva_dir.is_dir():
             raise argparse.ArgumentTypeError(
-                f"{args.mrva_dir} is not an existing mrva directory"
+                f"{known.mrva_dir} is not an existing mrva directory"
             )
 
-    return args, argv
+    return known, unknown
 
 
 async def amain():
-    args, argv = parse_args()
+    args, argv = parse_args(sys.argv[1:])
 
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
