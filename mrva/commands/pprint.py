@@ -5,7 +5,6 @@ import sys
 import jinja2
 
 from mrva import types
-from mrva import util
 
 logger = logging.getLogger(__name__)
 
@@ -84,11 +83,7 @@ def print_sarif_output(sarif_path, context, gh_url="", flows=True, file=None):
                         location.start_line,
                         location.end_line,
                     ),
-                    "lines": util.number_lines(
-                        sarif_output.artifact_lines(location, context),
-                        # 1-based indexing (line numbers)
-                        start=max(location.start_line - context.before, 1),
-                    ),
+                    "lines": sarif_output.numbered_lines(location, context),
                 }
                 for location in result.locations(flows=flows)
             ],

@@ -143,8 +143,8 @@ class SARIFOutput:
     def results(self):
         return [SARIFResult(r) for r in self.first_run["results"]]
 
-    def artifact_lines(self, result, context):
-        artifact = self.first_run["artifacts"][result.artifact_index]
+    def numbered_lines(self, location, context):
+        artifact = self.first_run["artifacts"][location.artifact_index]
 
         # --sarif-add-file-contents provides this data
         contents = artifact.get("contents", {}).get("text", "")
@@ -152,9 +152,12 @@ class SARIFOutput:
             return []
 
         lines = contents.split("\n")
+        end = location.end_line + context.after
 
         # -1 for 0-based indexing
-        start = max(result.start_line - context.before - 1, 0)
-        end = result.end_line + context.after
+        list_start = max(location.start_line - context.before - 1, 0)
 
-        return lines[start:end]
+        # 1-based indexing (line numbers)
+        line_start = max(location.start_line - context.before, 1)
+
+        return util.number_lines(lines[list_start:end], start=line_start)
