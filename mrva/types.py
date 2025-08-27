@@ -45,20 +45,14 @@ class MRVAConfig:
 
         if select is None:
             select = []
-        elif ignore is None:
+        if ignore is None:
             ignore = []
 
-        # fmt: off
         predicate = (
-            lambda r: r.download_success and any(
-                term in r.mrva_name for term in select
-            ) if select
-            else lambda r: r.download_success and any(
-                term not in r.mrva_name for term in ignore
-            ) if ignore
-            else lambda r: r.download_success
+            lambda r: r.download_success
+            and (not select or any(term in r.mrva_name for term in select))
+            and (not ignore or any(term not in r.mrva_name for term in ignore))
         )
-        # fmt: on
 
         return util.partition(self.repos, predicate)
 

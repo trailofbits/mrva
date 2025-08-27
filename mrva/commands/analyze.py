@@ -36,6 +36,7 @@ async def main(args, argv):
         ]
 
         try:
+            logger.debug("Running CodeQL command: %s", command)
             process = subprocess.run(
                 command,
                 stdout=sys.stdout,
