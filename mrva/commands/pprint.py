@@ -51,9 +51,9 @@ def permalink(repo):
     # This may eventually need to be adjusted or configurable. A short hash
     # may not uniquely identify a commit in repos with many commits.
     # https://github.com/desktop/desktop/issues/6662
-    hash_size = 8
+    commit_ref = repo.commit[:8] if repo.commit else "main"
 
-    return f"{repo.url}/blob/{repo.commit[:hash_size]}"
+    return f"{repo.url}/blob/{commit_ref}"
 
 
 def color(color, s):

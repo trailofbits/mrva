@@ -36,7 +36,8 @@ async def main(args, argv):
         ]
 
         try:
-            logger.debug("Running CodeQL command: %s", command)
+            logger.info("Running CodeQL analysis on %s", repo.mrva_name)
+            logger.debug("Full CodeQL command: %s", command)
             process = subprocess.run(
                 command,
                 stdout=sys.stdout,
