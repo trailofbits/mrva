@@ -24,6 +24,17 @@ $ mrva -h
 
 ## Using
 
+`mrva` has the following command tree:
+
+- `mrva`
+  - `download`
+    - `top`
+    - `org`
+    - `repo`
+    - `query`
+  - `analyze`
+  - `pprint`
+
 Using `mrva` generally requires three steps:
 
 1. Downloading existing CodeQL databases from the GitHub API
