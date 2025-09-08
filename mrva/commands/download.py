@@ -76,36 +76,38 @@ async def main(args, argv):
     async with gh.Client(args.token, args.base_url, args.timeout) as client:
         if args.download_command == "top":
             query = f"language:{args.language}"
-            repos = await client.search_repos(query, limit=args.limit)
+            repo_pages = client.search_repos(query, limit=args.limit)
         elif args.download_command == "org":
             query = f"org:{args.owner} language:{args.language}"
-            repos = await client.search_repos(query, limit=args.limit)
+            repo_pages = client.search_repos(query, limit=args.limit)
         elif args.download_command == "repo":
             repo = await client.get_repo(args.owner, args.repository)
-            repos = [repo.json()]
+            repo_pages = [repo.json()].__aiter__()  # Use aiter() once Python 3.10+
         elif args.download_command == "query":
-            repos = await client.search_repos(args.query, limit=args.limit)
+            repo_pages = client.search_repos(args.query, limit=args.limit)
         else:
             raise Exception(f"Unknown download command {args.download_command}")
-
-        logger.info(
-            "Found %d repositories from command %s",
-            len(repos),
-            args.download_command,
-        )
 
         mrva_repos = []
         all_success = True
 
-        repo_mrva_info = await util.zip_gather(
-            repos,
-            lambda repo: download_database_contents(
-                client,
-                repo["full_name"],
-                args.language,
-                args.mrva_dir,
-            ),
-        )
+        gather_tasks = [
+            asyncio.create_task(
+                util.zip_gather(
+                    repo_page,
+                    lambda repo: download_database_contents(
+                        client,
+                        repo["full_name"],
+                        args.language,
+                        args.mrva_dir,
+                    ),
+                )
+            )
+            async for repo_page in repo_pages
+        ]
+        gathered = await asyncio.gather(*gather_tasks)
+        repo_mrva_info = util.flatten(gathered)
+
         for repo, (download_success, mrva_name, db_dir, commit) in repo_mrva_info:
             mrva_repo = types.MRVARepo(
                 url=repo["html_url"],

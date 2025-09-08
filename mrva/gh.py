@@ -126,24 +126,22 @@ class Client:
             per_page = limit
 
         # https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-repositories
-        repos = [
-            repo
-            async for page in self._paginated_get(
-                "/search/repositories",
-                limiter=gh_item_limiter(limit=limit),
-                params={
-                    "q": query,
-                    "sort": "stars",
-                    "order": "desc",
-                    "per_page": per_page,
-                },
-            )
-            for repo in page.json()["items"]
-        ]
-        if len(repos) > limit:
-            repos = repos[:limit]
-
-        return repos
+        pages = self._paginated_get(
+            "/search/repositories",
+            limiter=gh_item_limiter(limit=limit),
+            params={
+                "q": query,
+                "sort": "stars",
+                "order": "desc",
+                "per_page": per_page,
+            },
+        )
+        count = 0
+        async for page in pages:
+            repos = page.json()["items"]
+            count += len(repos)
+            index = len(repos) if count <= limit else limit - count
+            yield repos[:index]
 
     async def get_repo(self, owner, repo):
         # https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository
