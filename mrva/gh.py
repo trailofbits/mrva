@@ -58,7 +58,7 @@ async def retry(fn, *args, count=5, timeout=60, **kwargs):
 
 
 class Client:
-    def __init__(self, token, base_url):
+    def __init__(self, token, base_url, timeout):
         # https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api?apiVersion=2022-11-28#headers
         headers = {
             "Accept": "application/vnd.github+json",
@@ -69,7 +69,7 @@ class Client:
             # https://docs.github.com/en/rest/authentication/authenticating-to-the-rest-api?apiVersion=2022-11-28
             headers["Authorization"] = f"Bearer {token}"
 
-        client = httpx.AsyncClient(base_url=base_url, headers=headers)
+        client = httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout)
 
         self.client = client
 

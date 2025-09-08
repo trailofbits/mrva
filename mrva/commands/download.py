@@ -9,7 +9,6 @@ import httpx
 
 from mrva import gh
 from mrva import types
-from mrva import util
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ async def download_database_contents(client, repo, language, mrva_dir):
 
 
 async def main(args, argv):
-    async with gh.Client(args.token, args.base_url) as client:
+    async with gh.Client(args.token, args.base_url, args.timeout) as client:
         if args.download_command == "top":
             query = f"language:{args.language}"
             repos = await client.search_repos(query, limit=args.limit)
@@ -97,33 +96,29 @@ async def main(args, argv):
         mrva_repos = []
         all_success = True
 
-        # Batch download requests to avoid this weird bug:
-        # https://github.com/encode/httpx/issues/1171
-        for i, batch in enumerate(util.batched(repos, 100), 1):
-            logger.debug("Gathering batch %d of CodeQL databases", i)
-            mrva_info = await asyncio.gather(
-                *(
-                    download_database_contents(
-                        client,
-                        repo["full_name"],
-                        args.language,
-                        args.mrva_dir,
-                    )
-                    for repo in batch
+        mrva_info = await asyncio.gather(
+            *(
+                download_database_contents(
+                    client,
+                    repo["full_name"],
+                    args.language,
+                    args.mrva_dir,
                 )
+                for repo in repos
             )
+        )
 
-            zipped = zip(batch, mrva_info, strict=True)
-            for repo, (download_success, mrva_name, db_dir, commit) in zipped:
-                mrva_repo = types.MRVARepo(
-                    url=repo["html_url"],
-                    download_success=download_success,
-                    mrva_name=mrva_name,
-                    db_dir=db_dir,
-                    commit=commit,
-                )
-                mrva_repos.append(mrva_repo)
-                all_success &= download_success
+        zipped = zip(repos, mrva_info, strict=True)
+        for repo, (download_success, mrva_name, db_dir, commit) in zipped:
+            mrva_repo = types.MRVARepo(
+                url=repo["html_url"],
+                download_success=download_success,
+                mrva_name=mrva_name,
+                db_dir=db_dir,
+                commit=commit,
+            )
+            mrva_repos.append(mrva_repo)
+            all_success &= download_success
 
         created = int(time.time())
         config = types.MRVAConfig(created=created, repos=mrva_repos)

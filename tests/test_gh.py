@@ -21,7 +21,9 @@ async def test_retry_too_many_request():
     too_many_requests_response = httpx.Response(httpx.codes.TOO_MANY_REQUESTS)
     success_response = httpx.Response(200, json={"key": "value"})
 
-    async with gh.Client(token="fake_token", base_url="api.github.com") as client:
+    async with gh.Client(
+        token="fake_token", base_url="api.github.com", timeout=None
+    ) as client:
         client.client.get = unittest.mock.AsyncMock(
             side_effect=[too_many_requests_response, success_response]
         )
@@ -35,7 +37,9 @@ async def test_retry_connection_error():
     connect_error = httpx.ConnectError("Simulated Connection Error")
     success_response = httpx.Response(200, json={"key": "value"})
 
-    async with gh.Client(token="fake_token", base_url="api.github.com") as client:
+    async with gh.Client(
+        token="fake_token", base_url="api.github.com", timeout=None
+    ) as client:
         client.client.get = unittest.mock.AsyncMock(
             side_effect=[connect_error, success_response]
         )
@@ -70,7 +74,9 @@ async def test_paginated_get():
         ),
     ]
 
-    async with gh.Client(token="fake_token", base_url="api.github.com") as client:
+    async with gh.Client(
+        token="fake_token", base_url="api.github.com", timeout=None
+    ) as client:
         client.client.get = unittest.mock.AsyncMock(side_effect=pages)
         responses = [page async for page in client._paginated_get("/some-endpoint")]
 

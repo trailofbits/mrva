@@ -90,6 +90,12 @@ def parse_args(args):
         help="GitHub base URL, or specify $GITHUB_BASE_URL"
     )
     download_parser.add_argument(
+        "--timeout",
+        action="store",
+        default=30,
+        help="HTTP request timeout"
+    )
+    download_parser.add_argument(
         "-l",
         "--language",
         action="store",

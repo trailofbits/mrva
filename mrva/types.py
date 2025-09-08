@@ -51,7 +51,7 @@ class MRVAConfig:
         predicate = (
             lambda r: r.download_success
             and (not select or any(term in r.mrva_name for term in select))
-            and (not ignore or any(term not in r.mrva_name for term in ignore))
+            and (not ignore or not any(term in r.mrva_name for term in ignore))
         )
 
         return util.partition(self.repos, predicate)
@@ -112,11 +112,13 @@ class SARIFResult:
                 for cf in self.result["codeFlows"]
                 for tf in cf["threadFlows"]
                 for location in tf["locations"]
+                if "region" in location["location"]["physicalLocation"]
             ]
 
         return [
             SARIFLocation(location["physicalLocation"])
             for location in self.result["locations"]
+            if "region" in location["physicalLocation"]
         ]
 
 
