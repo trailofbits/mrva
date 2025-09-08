@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 import textwrap
 
@@ -34,3 +35,8 @@ def number_lines(lines, start=1):
     dedented_lines = textwrap.dedent("\n".join(lines)).split("\n")
 
     return list(enumerate(dedented_lines, start=start))
+
+
+async def zip_gather(iterable, fn):
+    gathered = await asyncio.gather(*(fn(i) for i in iterable))
+    return zip(iterable, gathered, strict=True)

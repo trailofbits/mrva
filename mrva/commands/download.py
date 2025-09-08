@@ -9,6 +9,7 @@ import httpx
 
 from mrva import gh
 from mrva import types
+from mrva import util
 
 logger = logging.getLogger(__name__)
 
@@ -96,20 +97,16 @@ async def main(args, argv):
         mrva_repos = []
         all_success = True
 
-        mrva_info = await asyncio.gather(
-            *(
-                download_database_contents(
-                    client,
-                    repo["full_name"],
-                    args.language,
-                    args.mrva_dir,
-                )
-                for repo in repos
-            )
+        repo_mrva_info = await util.zip_gather(
+            repos,
+            lambda repo: download_database_contents(
+                client,
+                repo["full_name"],
+                args.language,
+                args.mrva_dir,
+            ),
         )
-
-        zipped = zip(repos, mrva_info, strict=True)
-        for repo, (download_success, mrva_name, db_dir, commit) in zipped:
+        for repo, (download_success, mrva_name, db_dir, commit) in repo_mrva_info:
             mrva_repo = types.MRVARepo(
                 url=repo["html_url"],
                 download_success=download_success,
