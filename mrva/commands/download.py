@@ -87,9 +87,6 @@ async def main(args, argv):
         else:
             raise Exception(f"Unknown download command {args.download_command}")
 
-        mrva_repos = []
-        all_success = True
-
         gather_tasks = [
             asyncio.create_task(
                 util.zip_gather(
@@ -105,21 +102,24 @@ async def main(args, argv):
             async for repo_page in repo_pages
         ]
         gathered = await asyncio.gather(*gather_tasks)
-        repo_mrva_info = util.flatten(gathered)
 
-        for repo, (download_success, mrva_name, db_dir, commit) in repo_mrva_info:
-            mrva_repo = types.MRVARepo(
-                url=repo["html_url"],
-                download_success=download_success,
-                mrva_name=mrva_name,
-                db_dir=db_dir,
-                commit=commit,
-            )
-            mrva_repos.append(mrva_repo)
-            all_success &= download_success
+    mrva_repos = []
+    all_success = True
+    repo_mrva_info = util.flatten(gathered)
 
-        created = int(time.time())
-        config = types.MRVAConfig(created=created, repos=mrva_repos)
-        config.to_mrva_dir(args.mrva_dir)
+    for repo, (download_success, mrva_name, db_dir, commit) in repo_mrva_info:
+        mrva_repo = types.MRVARepo(
+            url=repo["html_url"],
+            download_success=download_success,
+            mrva_name=mrva_name,
+            db_dir=db_dir,
+            commit=commit,
+        )
+        mrva_repos.append(mrva_repo)
+        all_success &= download_success
+
+    created = int(time.time())
+    config = types.MRVAConfig(created=created, repos=mrva_repos)
+    config.to_mrva_dir(args.mrva_dir)
 
     return 0 if all_success else 1
