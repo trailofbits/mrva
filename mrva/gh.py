@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 
 import httpx
@@ -145,5 +146,17 @@ class Client:
 
     async def get_repo(self, owner, repo):
         # https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository
-        resp = await retry(self.client.get, f"/repos/{owner}/{repo}")
+        return await retry(self.client.get, f"/repos/{owner}/{repo}")
+
+    async def get_repo_gen(self, *args, **kwargs):
+        resp = await self.get_repo(*args, **kwargs)
         yield [resp.json()]
+
+    async def get_repos_from_file(self, fd):
+        data = json.load(fd)
+
+        responses = await asyncio.gather(
+            *(self.get_repo(*repo.split("/")) for repo in data["repositories"])
+        )
+
+        yield [resp.json() for resp in responses]

@@ -166,6 +166,17 @@ def parse_args(args):
         help="GitHub repository name"
     )
 
+    from_file_parser = download_subparsers.add_parser(
+        "from-file",
+        help="Custom repository list"
+    )
+    from_file_parser.add_argument(
+        "json_file",
+        action="store",
+        type=argparse.FileType("r"),
+        help="File containing repository information"
+    )
+
     query_parser = download_subparsers.add_parser(
         "query",
         help="Repositories based on an arbitrary search query",
