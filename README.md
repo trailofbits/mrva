@@ -52,15 +52,19 @@ $ mkdir dbs/
 
 This directory will eventually contain CodeQL databases, tool configuration, SARIF results, and other information `mrva` needs to operate.
 
-To download CodeQL databases use the `mrva download` command:
+Use the `mrva download` command to download CodeQL databases:
 
 ```bash
 $ mrva download --token $GITHUB_TOKEN --language ruby dbs/ top --limit 100
 ```
 
-This command will download CodeQL databases of the top 100 GitHub Ruby projects (by star count). You can download other databases by specifying a different `--language`, or using a different search strategy like `download org` or `download repo`.
+<!-- prettier-ignore -->
+> [!NOTE]
+> `download` will automatically use the `$GITHUB_TOKEN` environment variable if it's available.
 
-Once you have your desired databases you can run CodeQL analyses against them using the `mrva analyze` command:
+This command will download CodeQL databases of the top 100 GitHub Ruby projects (by star count). You can download other databases by specifying a different `--language`, or using a different download strategy like `download org` or `download repo`.
+
+Use the `mrva analyze` command to analyze the downloaded databases:
 
 ```bash
 $ mrva analyze dbs/ /path/to/queries -- --rerun --threads=0
@@ -70,9 +74,9 @@ Any flags included after `--` are passed directly to the CodeQL binary.
 
 <!-- prettier-ignore -->
 > [!NOTE]
-> `mrva` recommends using the `--threads` flag to process multiple queries within a _single_ CodeQL analysis instead of parallelizing multiple CodeQL analyses. This prevents `mrva` from competing with CodeQL for parallel processing.
+> `mrva` recommends using the `--threads` flag to process multiple queries within a _single_ CodeQL analysis instead of parallelizing multiple CodeQL analyses. This prevents contention between `mrva` and CodeQL.
 
-After this analysis is done you can view the results using the `mrva pprint` command:
+Use the `mrva pprint` command to view analysis results:
 
 ```bash
 $ mrva pprint dbs/
