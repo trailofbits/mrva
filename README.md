@@ -32,6 +32,7 @@ $ mrva -h
     - `org`
     - `repo`
     - `query`
+    - `from-file`
   - `analyze`
   - `pprint`
 
