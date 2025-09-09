@@ -81,8 +81,7 @@ async def main(args, argv):
             query = f"org:{args.owner} language:{args.language}"
             repo_pages = client.search_repos(query, limit=args.limit)
         elif args.download_command == "repo":
-            repo = await client.get_repo(args.owner, args.repository)
-            repo_pages = [repo.json()].__aiter__()  # Use aiter() once Python 3.10+
+            repo_pages = client.get_repo(args.owner, args.repository)
         elif args.download_command == "query":
             repo_pages = client.search_repos(args.query, limit=args.limit)
         else:

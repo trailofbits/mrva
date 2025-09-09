@@ -145,7 +145,5 @@ class Client:
 
     async def get_repo(self, owner, repo):
         # https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository
-        return await retry(
-            self.client.get,
-            f"/repos/{owner}/{repo}",
-        )
+        resp = await retry(self.client.get, f"/repos/{owner}/{repo}")
+        yield [resp.json()]
