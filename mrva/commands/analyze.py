@@ -35,19 +35,13 @@ async def main(args, argv):
             args.queries,
         ]
 
-        try:
-            logger.info("Running CodeQL analysis on %s", repo.mrva_name)
-            logger.debug("Full CodeQL command: %s", command)
-            process = subprocess.run(
-                command,
-                stdout=sys.stdout,
-                stderr=sys.stderr,
-            )
-        except FileNotFoundError:
-            logger.error(
-                "Could not find 'codeql' binary on your PATH, add it and try again"
-            )
-            return 1
+        logger.info("Running CodeQL analysis on %s", repo.mrva_name)
+        logger.debug("Full CodeQL command: %s", command)
+        process = subprocess.run(
+            command,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
 
         if process.returncode != 0:
             logger.warning(

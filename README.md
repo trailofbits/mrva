@@ -35,6 +35,7 @@ $ mrva -h
     - `from-file`
   - `analyze`
   - `pprint`
+  - `print-ast` (expiremental)
 
 Using `mrva` generally requires three steps:
 

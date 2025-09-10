@@ -1,0 +1,8 @@
+---
+name: test
+authors: test
+version: 0.0.1
+library: false
+extractor: ruby
+dependencies:
+  codeql/ruby-all: "*"

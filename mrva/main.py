@@ -277,6 +277,43 @@ def parse_args(args):
         default=1,
         help="Print N lines of leading and trailing context surrounding each match"
     )
+
+    print_ast_parser = subparsers.add_parser(
+        "print-ast",
+        help="Print AST information for source code files in CodeQL databases"
+    )
+    print_ast_parser.add_argument(
+        "mrva_dir",
+        type=pathlib.Path,
+        default=pathlib.Path.cwd(),
+        help="mrva storage and configuration directory"
+    )
+    print_ast_parser.add_argument(
+        "-l",
+        "--language",
+        action="store",
+        required=True,
+        choices=CODEQL_LANGUAGES,
+        help="CodeQL database language"
+    )
+    print_ast_parser.add_argument(
+        "-m",
+        "--match",
+        action="store",
+        default="%",
+        help="Select filenames that match this pattern, uses SQL LIKE syntax"
+    )
+    print_ast_filter_group = print_ast_parser.add_mutually_exclusive_group(required=False)
+    print_ast_filter_group.add_argument(
+        "--select",
+        action="append",
+        help="Select CodeQL SARIF results that contain these mrva names"
+    )
+    print_ast_filter_group.add_argument(
+        "--ignore",
+        action="append",
+        help="Ignore CodeQL SARIF results that contain these mrva names"
+    )
     # fmt: on
 
     known, unknown = p.parse_known_args(args=args)
@@ -287,7 +324,7 @@ def parse_args(args):
         known = p.parse_args(args=args)
         unknown = []
 
-    if known.command in ["download", "analyze"]:
+    if known.command in ["download", "analyze", "print-ast"]:
         if not known.mrva_dir.is_dir():
             raise argparse.ArgumentTypeError(
                 f"{known.mrva_dir} is not an existing mrva directory"
@@ -314,6 +351,7 @@ async def amain():
         "download": commands.download.main,
         "analyze": commands.analyze.main,
         "pprint": commands.pprint.main,
+        "print-ast": commands.print_ast.main,
     }
     command = command_dispatch.get(args.command)
     if command is None:
@@ -321,7 +359,16 @@ async def amain():
         return 1
 
     logger.info("Starting command %s", args.command)
-    result = await command(args, argv)
+    try:
+        result = await command(args, argv)
+    except FileNotFoundError as e:
+        if e.filename == "codeql":
+            logger.error(
+                "Could not find 'codeql' binary on your PATH, add it and try again"
+            )
+            return 1
+        else:
+            raise
     logger.info("Finished command %s", args.command)
 
     return result
