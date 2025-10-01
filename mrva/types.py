@@ -148,12 +148,13 @@ class SARIFOutput:
             return []
 
         lines = contents.split("\n")
+        start = location.start_line - context.before
         end = location.end_line + context.after
 
         # -1 for 0-based indexing
-        list_start = max(location.start_line - context.before - 1, 0)
+        list_start = max(start - 1, 0)
 
         # 1-based indexing (line numbers)
-        line_start = max(location.start_line - context.before, 1)
+        line_start = max(start, 1)
 
         return util.number_lines(lines[list_start:end], start=line_start)
