@@ -1,4 +1,3 @@
-import collections
 import logging
 import sys
 
@@ -12,8 +11,6 @@ BOLD_RED = "\033[1;31m"
 BOLD_GREEN = "\033[1;32m"
 BOLD_CYAN = "\033[1;36m"
 END = "\033[0m"
-
-Context = collections.namedtuple("Context", ["before", "after"])
 
 OUTPUT_TEMPLATE = """
 {% for tr in trs %}
@@ -96,12 +93,12 @@ def print_sarif_output(sarif_path, context, gh_url="", flows=True, file=None):
 
 async def main(args, argv):
     context = (
-        Context(before=0, after=args.after_context)
+        types.Context(before=0, after=args.after_context)
         if args.after_context
         else (
-            Context(before=args.before_context, after=0)
+            types.Context(before=args.before_context, after=0)
             if args.before_context
-            else Context(before=args.context, after=args.context)
+            else types.Context(before=args.context, after=args.context)
         )
     )
 

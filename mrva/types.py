@@ -1,3 +1,4 @@
+import collections
 import dataclasses
 import json
 
@@ -5,6 +6,8 @@ from mrva import util
 
 MRVA_CONFIG_FILENAME = "mrva-config.json"
 MRVA_REPO_SARIF_FILENAME = "mrva-output.sarif"
+
+Context = collections.namedtuple("Context", ["before", "after"])
 
 
 @dataclasses.dataclass(frozen=True)
@@ -89,6 +92,18 @@ class SARIFLocation:
         # improve this to efficiently find the end column - use "$" for now.
         return self.location["region"].get("endColumn", "$")
 
+    @property
+    def context_snippet(self):
+        # --sarif-add-snippets provides this data
+        text = self.location.get("contextRegion", {}).get("snippet", {}).get("text")
+
+        # rstrip because CodeQL includes the last line's newline for some reason
+        return text.rstrip() if text is not None else text
+
+    @property
+    def context_start_line(self):
+        return self.location["contextRegion"]["startLine"]
+
 
 class SARIFResult:
     def __init__(self, result):
@@ -139,22 +154,37 @@ class SARIFOutput:
     def results(self):
         return [SARIFResult(r) for r in self.first_run["results"]]
 
-    def numbered_lines(self, location, context):
-        artifact = self.first_run["artifacts"][location.artifact_index]
-
+    def artifact_contents(self, index):
         # --sarif-add-file-contents provides this data
-        contents = artifact.get("contents", {}).get("text", "")
-        if not contents:
+        return self.first_run["artifacts"][index].get("contents", {}).get("text")
+
+    def numbered_lines(self, location, context):
+        contents = (
+            location.context_snippet
+            if location.context_snippet is not None
+            else self.artifact_contents(location.artifact_index)
+        )
+
+        if contents is None:
             return []
 
         lines = contents.split("\n")
-        start = location.start_line - context.before
-        end = location.end_line + context.after
 
-        # -1 for 0-based indexing
-        list_start = max(start - 1, 0)
+        if location.context_snippet is not None:
+            # Assume --sarif-add-snippets provides contextRegion, which
+            # hardcodes two lines of context. In this situation output all
+            # the snippet content provided.
+            list_start = 0
+            end = len(lines)
+            line_start = location.context_start_line
+        else:
+            start = location.start_line - context.before
+            end = location.end_line + context.after
 
-        # 1-based indexing (line numbers)
-        line_start = max(start, 1)
+            # -1 for 0-based indexing
+            list_start = max(start - 1, 0)
+
+            # 1-based indexing (line numbers)
+            line_start = max(start, 1)
 
         return util.number_lines(lines[list_start:end], start=line_start)
