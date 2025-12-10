@@ -12,15 +12,14 @@ Table of contents:
 
 ## Installing
 
-Currently `mrva` must be installed from the git source. If/when it is open sourced we will upload it to PyPI.
-
-To install:
+First, install `mrva` from [PyPI](https://pypi.org/project/mrva/):
 
 ```bash
-$ git clone https://github.com/trailofbits/mrva.git
-$ python -m pip install mrva/
+$ python -m pip install mrva
 $ mrva -h
 ```
+
+_Or, use your favorite Python package installer like `pipx` or `uv`._
 
 ## Using
 
