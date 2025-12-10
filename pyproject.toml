@@ -1,7 +1,7 @@
 [project]
 name = "mrva"
 version = "0.5.0"
-description = "A CLI tool for running local CodeQL multi-repo variant analysis"
+description = "A terminal-first approach to CodeQL multi-repo variant analysis"
 license = "AGPL-3.0"
 readme = "README.md"
 requires-python = ">=3.9,<4"
