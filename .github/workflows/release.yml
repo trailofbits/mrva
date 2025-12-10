@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "poetry"
+      - run: poetry build
+      - name: Upload dists
+        uses: actions/upload-artifact@v5
+        with:
+          name: mrva-dists
+          path: dist/
+
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write # For trusted publishing + codesigning.
+      contents: write # For attaching signing artifacts to the release.
+    needs:
+      - build
+    steps:
+      - name: Download dists
+        uses: actions/download-artifact@v6
+        with:
+          name: mrva-dists
+          path: dist/
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
