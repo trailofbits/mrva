@@ -5,7 +5,7 @@ description = "A CLI tool for running local CodeQL multi-repo variant analysis"
 license = "AGPL-3.0"
 readme = "README.md"
 requires-python = ">=3.9,<4"
-authors = []
+authors = ["support@trailofbits.com"]
 dependencies = [
     "httpx",
     "jinja2 (>=3.1.6,<4.0.0)",

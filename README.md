@@ -1,6 +1,6 @@
 # mrva
 
-`mrva` is a CLI tool for running local CodeQL [multi-repo variant analysis](https://docs.github.com/en/code-security/codeql-for-vs-code/getting-started-with-codeql-for-vs-code/running-codeql-queries-at-scale-with-multi-repository-variant-analysis). You can download existing CodeQL databases from the GitHub API, run variant analyses, and view results all from your local machine. This tool was inspired by the VSCode [CodeQL extension](https://github.com/github/vscode-codeql), but instead runs as a standalone CLI tool.
+`mrva` is a terminal-first approach to CodeQL [multi-repo variant analysis](https://docs.github.com/en/code-security/codeql-for-vs-code/getting-started-with-codeql-for-vs-code/running-codeql-queries-at-scale-with-multi-repository-variant-analysis). You can download existing CodeQL databases from the GitHub API, run variant analyses, and view results all from your local machine. This tool was inspired by the VSCode [CodeQL extension](https://github.com/github/vscode-codeql), but instead runs as a standalone CLI tool.
 
 Table of contents:
 
@@ -81,6 +81,17 @@ Use the `mrva pprint` command to view analysis results:
 
 ```bash
 $ mrva pprint dbs/
+```
+
+You can also use the `pprint` command to print raw CodeQL SARIF results:
+
+```bash
+$ codeql database analyze \
+    --format sarif-latest \
+    --sarif-add-file-contents \
+    --output output.sarif \
+    -- db/ query.ql
+$ mrva pprint output.sarif
 ```
 
 Many of these commands take additional flags to modify their functionality. For example, `analyze` and `pprint` take `--select` and `--ignore` flags to filter repositories. Use the `--help` flag to explore all functionality provided by a given command.
