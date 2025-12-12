@@ -4,6 +4,7 @@ import sys
 import jinja2
 
 from mrva import types
+from mrva import util
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,8 @@ def print_sarif_output(sarif_path, context, gh_url="", flows=True, file=None):
         for result in sarif_output.results
     ]
     if trs:
-        print(TEMPLATE.render(trs=trs), file=file)
+        with util.suppress_broken_pipe():
+            print(TEMPLATE.render(trs=trs), file=file)
 
 
 async def main(args, argv):

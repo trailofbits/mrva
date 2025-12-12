@@ -1,5 +1,8 @@
 import asyncio
+import contextlib
 import itertools
+import os
+import sys
 import textwrap
 
 
@@ -40,3 +43,15 @@ def number_lines(lines, start=1):
 async def zip_gather(iterable, fn):
     gathered = await asyncio.gather(*(fn(i) for i in iterable))
     return zip(iterable, gathered, strict=True)
+
+
+@contextlib.contextmanager
+def suppress_broken_pipe():
+    # https://docs.python.org/3/library/signal.html#note-on-sigpipe
+    try:
+        yield
+        sys.stdout.flush()
+    except BrokenPipeError:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        sys.exit(1)
