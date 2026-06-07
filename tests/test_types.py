@@ -111,3 +111,30 @@ def test_analyzable_repos_empty_ignore():
     result = config.analyzable_repos(ignore=[])
 
     assert result == ([repo1], [repo2])
+
+def test_cloud_run_state_roundtrip(tmp_path):
+    state = types.CloudRunState(
+        variant_analysis_id=42,
+        controller_repo="owner/repo",
+        controller_repo_id=123,
+        language="python",
+        status="submitted",
+    )
+    state.to_mrva_dir(tmp_path)
+    loaded = types.CloudRunState.from_mrva_dir(tmp_path)
+    assert loaded == state
+
+
+def test_cloud_run_state_status_update(tmp_path):
+    state = types.CloudRunState(
+        variant_analysis_id=7,
+        controller_repo="octocat/hello",
+        controller_repo_id=99,
+        language="java",
+        status="submitted",
+    )
+    state.to_mrva_dir(tmp_path)
+    state.status = "succeeded"
+    state.to_mrva_dir(tmp_path)
+    loaded = types.CloudRunState.from_mrva_dir(tmp_path)
+    assert loaded.status == "succeeded"

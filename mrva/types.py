@@ -5,6 +5,7 @@ import json
 from mrva import util
 
 MRVA_CONFIG_FILENAME = "mrva-config.json"
+MRVA_CLOUD_STATE_FILENAME = "mrva-cloud-state.json"
 MRVA_REPO_SARIF_FILENAME = "mrva-output.sarif"
 
 Context = collections.namedtuple("Context", ["before", "after"])
@@ -58,6 +59,24 @@ class MRVAConfig:
         )
 
         return util.partition(self.repos, predicate)
+
+
+@dataclasses.dataclass
+class CloudRunState:
+    variant_analysis_id: int
+    controller_repo: str
+    controller_repo_id: int
+    language: str
+    status: str  # "submitted" | "in_progress" | "succeeded" | "failed" | "cancelled"
+
+    @classmethod
+    def from_mrva_dir(cls, mrva_dir):
+        state_path = mrva_dir / MRVA_CLOUD_STATE_FILENAME
+        return cls(**json.load(state_path.open()))
+
+    def to_mrva_dir(self, mrva_dir):
+        state_path = mrva_dir / MRVA_CLOUD_STATE_FILENAME
+        json.dump(dataclasses.asdict(self), state_path.open("w"), indent=4)
 
 
 class SARIFLocation:
