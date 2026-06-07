@@ -9,7 +9,9 @@ import zipfile
 
 import httpx
 
-from mrva import gh, pack, types
+from mrva import gh
+from mrva import pack
+from mrva import types
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +51,20 @@ async def _resolve_repositories(client, args):
     return repos
 
 
-async def _download_repo_result(client, controller_repo_id, va_id, repo, language, mrva_dir):
+async def _download_repo_result(
+    client, controller_repo_id, va_id, repo, language, mrva_dir
+):
     """Fetch artifact URL for one repo, download zip, extract results.sarif."""
     repo_id = repo["repository"]["id"]
     full_name = repo["repository"]["full_name"]
 
-    task_resp = await client.get_variant_analysis_repo_task(controller_repo_id, va_id, repo_id)
+    task_resp = await client.get_variant_analysis_repo_task(
+        controller_repo_id, va_id, repo_id
+    )
     if task_resp.status_code != httpx.codes.OK:
-        logger.warning("Could not get repo task for %s: %s", full_name, task_resp.status_code)
+        logger.warning(
+            "Could not get repo task for %s: %s", full_name, task_resp.status_code
+        )
         return None
 
     task = task_resp.json()
@@ -67,7 +75,11 @@ async def _download_repo_result(client, controller_repo_id, va_id, repo, languag
 
     artifact_resp = await client.client.get(artifact_url, follow_redirects=True)
     if artifact_resp.status_code != httpx.codes.OK:
-        logger.warning("Could not download artifact for %s: %s", full_name, artifact_resp.status_code)
+        logger.warning(
+            "Could not download artifact for %s: %s",
+            full_name,
+            artifact_resp.status_code,
+        )
         return None
 
     zf = zipfile.ZipFile(io.BytesIO(artifact_resp.content))
@@ -104,7 +116,9 @@ async def main(args, argv):
             va_id = state.variant_analysis_id
             controller_repo_id = state.controller_repo_id
             language = state.language
-            logger.info("Resuming variant analysis %d on %s", va_id, state.controller_repo)
+            logger.info(
+                "Resuming variant analysis %d on %s", va_id, state.controller_repo
+            )
         else:
             language = args.language
 
@@ -133,9 +147,15 @@ async def main(args, argv):
                 **databases,
             }
 
-            submit_resp = await client.submit_variant_analysis(controller_repo_id, payload)
+            submit_resp = await client.submit_variant_analysis(
+                controller_repo_id, payload
+            )
             if submit_resp.status_code not in (httpx.codes.CREATED, httpx.codes.OK):
-                logger.error("Submission failed: %s %s", submit_resp.status_code, submit_resp.text)
+                logger.error(
+                    "Submission failed: %s %s",
+                    submit_resp.status_code,
+                    submit_resp.text,
+                )
                 return 1
 
             va_id = submit_resp.json()["id"]
@@ -169,8 +189,19 @@ async def main(args, argv):
             state.to_mrva_dir(mrva_dir)
 
             scanned = data.get("scanned_repositories") or []
-            done_count = sum(1 for r in scanned if r["analysis_status"] in ("succeeded", "failed", "canceled", "timed_out"))
-            logger.info("Variant analysis %d: %s (%d/%d repos done)", va_id, status, done_count, len(scanned))
+            done_count = sum(
+                1
+                for r in scanned
+                if r["analysis_status"]
+                in ("succeeded", "failed", "canceled", "timed_out")
+            )
+            logger.info(
+                "Variant analysis %d: %s (%d/%d repos done)",
+                va_id,
+                status,
+                done_count,
+                len(scanned),
+            )
 
             # Log skipped repos once
             skipped = data.get("skipped_repositories") or {}
@@ -183,7 +214,9 @@ async def main(args, argv):
 
             # Download newly succeeded repos
             download_tasks = [
-                _download_repo_result(client, controller_repo_id, va_id, r, language, mrva_dir)
+                _download_repo_result(
+                    client, controller_repo_id, va_id, r, language, mrva_dir
+                )
                 for r in scanned
                 if r["analysis_status"] == "succeeded"
                 and r.get("result_count", 0) > 0
@@ -192,7 +225,13 @@ async def main(args, argv):
             if download_tasks:
                 results = await asyncio.gather(*download_tasks)
                 for r, repo_data in zip(
-                    [r for r in scanned if r["analysis_status"] == "succeeded" and r.get("result_count", 0) > 0 and r["repository"]["full_name"] not in downloaded],
+                    [
+                        r
+                        for r in scanned
+                        if r["analysis_status"] == "succeeded"
+                        and r.get("result_count", 0) > 0
+                        and r["repository"]["full_name"] not in downloaded
+                    ],
                     results,
                 ):
                     downloaded.add(r["repository"]["full_name"])
@@ -204,21 +243,28 @@ async def main(args, argv):
 
         # --- Finalise ---
         # Add failed repos to config so they appear (with download_success=False)
-        for r in (data.get("scanned_repositories") or []):
+        for r in data.get("scanned_repositories") or []:
             full_name = r["repository"]["full_name"]
             if full_name not in downloaded:
-                mrva_repos.append(types.MRVARepo(
-                    url=f"https://github.com/{full_name}",
-                    download_success=False,
-                    mrva_name=_mrva_name(language, full_name),
-                    db_dir="",
-                    commit="",
-                ))
+                mrva_repos.append(
+                    types.MRVARepo(
+                        url=f"https://github.com/{full_name}",
+                        download_success=False,
+                        mrva_name=_mrva_name(language, full_name),
+                        db_dir="",
+                        commit="",
+                    )
+                )
 
         config = types.MRVAConfig(created=int(time.time()), repos=mrva_repos)
         config.to_mrva_dir(mrva_dir)
 
         total = sum(1 for r in mrva_repos if r.download_success)
-        logger.info("Variant analysis %d %s. Downloaded results for %d repos.", va_id, status, total)
+        logger.info(
+            "Variant analysis %d %s. Downloaded results for %d repos.",
+            va_id,
+            status,
+            total,
+        )
 
         return 0 if status == "succeeded" else 1

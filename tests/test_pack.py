@@ -10,6 +10,7 @@ from mrva import pack
 
 def _make_fake_bundle(tmp_path):
     """Simulate codeql writing a bundle by creating a fake tgz."""
+
     def fake_run(cmd, **kwargs):
         # Find the -o argument and write a fake file there
         o_idx = cmd.index("-o")
@@ -18,6 +19,7 @@ def _make_fake_bundle(tmp_path):
         result = unittest.mock.MagicMock()
         result.returncode = 0
         return result
+
     return fake_run
 
 

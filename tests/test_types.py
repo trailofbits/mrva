@@ -112,6 +112,7 @@ def test_analyzable_repos_empty_ignore():
 
     assert result == ([repo1], [repo2])
 
+
 def test_cloud_run_state_roundtrip(tmp_path):
     state = types.CloudRunState(
         variant_analysis_id=42,

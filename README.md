@@ -174,4 +174,3 @@ Run Python tests with the following command:
 ```bash
 $ poetry run pytest --cov
 ```
-
