@@ -6,6 +6,7 @@ Table of contents:
 
 - [Installing](#installing)
 - [Using](#using)
+- [Cloud variant analysis (`mrva run`)](#cloud-variant-analysis-mrva-run)
 - [Developing](#developing)
   - [Testing](#testing)
   - [Linting](#linting)
@@ -35,6 +36,12 @@ _Or, use your favorite Python package installer like `pipx` or `uv`._
   - `analyze`
   - `pprint`
   - `print-ast` (experimental)
+  - `run` (cloud)
+    - `top`
+    - `org`
+    - `repo`
+    - `query`
+    - `from-file`
 
 Using `mrva` generally requires three steps:
 
@@ -95,6 +102,49 @@ $ mrva pprint output.sarif
 
 Many of these commands take additional flags to modify their functionality. For example, `analyze` and `pprint` take `--select` and `--ignore` flags to filter repositories. Use the `--help` flag to explore all functionality provided by a given command.
 
+## Cloud variant analysis (`mrva run`)
+
+`mrva run` dispatches a CodeQL query as a cloud job via GitHub Actions, polls for results, and downloads per-repo SARIF into the same directory layout as the local workflow — so `mrva pprint` works unchanged.
+
+### Prerequisites
+
+- A **controller repository** on GitHub (can be empty, but must have at least one commit). Set it via `--controller-repo owner/repo` or the `$MRVA_CONTROLLER_REPO` environment variable.
+- A GitHub token with `repo` scope (`$GITHUB_TOKEN`).
+- A `codeql` binary in your `$PATH` (used to bundle the query pack before submission).
+
+### Usage
+
+```bash
+# Run against the top 100 Python repos (by star count)
+$ mrva run --language python --controller-repo owner/ctrl results/ query.ql top --limit 100
+
+# Run against all repos in an organization
+$ mrva run --language java --controller-repo owner/ctrl results/ query.ql org --owner my-org
+
+# Run against a single repo
+$ mrva run --language python --controller-repo owner/ctrl results/ query.ql repo --owner octocat --repository hello-world
+
+# Run against repos matching a search query
+$ mrva run --language go --controller-repo owner/ctrl results/ query.ql query -q "org:golang stars:>100"
+
+# Run against a custom repo list file
+$ mrva run --language python --controller-repo owner/ctrl results/ query.ql from-file repos.json
+```
+
+<!-- prettier-ignore -->
+> [!NOTE]
+> `run` will automatically use `$GITHUB_TOKEN` and `$MRVA_CONTROLLER_REPO` if they are set.
+
+The command blocks and polls until the cloud job finishes, downloading each repo's SARIF as it completes. Results land in `results/mrva-{language}-{owner}-{repo}/mrva-output.sarif`.
+
+### Resuming after interruption
+
+If the process is killed during polling, the variant analysis ID is persisted to `results/mrva-cloud-state.json` immediately after submission. Resume with:
+
+```bash
+$ mrva run --resume <variant_analysis_id> results/
+```
+
 ## Developing
 
 `mrva` uses [`poetry`](https://python-poetry.org/) for dependency and configuration management.
@@ -124,3 +174,4 @@ Run Python tests with the following command:
 ```bash
 $ poetry run pytest --cov
 ```
+
