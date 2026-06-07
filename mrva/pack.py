@@ -2,7 +2,6 @@ import base64
 import pathlib
 import shutil
 import subprocess
-import tempfile
 
 QLPACK_FILENAMES = ("qlpack.yml", "codeql-pack.yml")
 QUERY_PACK_NAME = "codeql-remote/query"
@@ -65,7 +64,18 @@ def build_query_pack(query_path, language, tmp_dir):
         # Existing pack directory — bundle directly.
         pack_dir = query_path
         query_args = []
-        _run(["codeql", "pack", "bundle", "--mrva", "-o", str(bundle_path), str(pack_dir), *query_args])
+        _run(
+            [
+                "codeql",
+                "pack",
+                "bundle",
+                "--mrva",
+                "-o",
+                str(bundle_path),
+                str(pack_dir),
+                *query_args,
+            ]
+        )
     else:
         # Bare .ql file — synthesize or use existing pack.
         existing_pack = _find_qlpack(query_path)
@@ -79,6 +89,17 @@ def build_query_pack(query_path, language, tmp_dir):
             _run(["codeql", "pack", "install", str(pack_dir)])
             query_args = ["--query", str(query_file)]
 
-        _run(["codeql", "pack", "bundle", "--mrva", *query_args, "-o", str(bundle_path), str(pack_dir)])
+        _run(
+            [
+                "codeql",
+                "pack",
+                "bundle",
+                "--mrva",
+                *query_args,
+                "-o",
+                str(bundle_path),
+                str(pack_dir),
+            ]
+        )
 
     return base64.b64encode(bundle_path.read_bytes()).decode()

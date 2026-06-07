@@ -1,14 +1,11 @@
 import io
-import json
-import pathlib
 import unittest.mock
 import zipfile
 
 import httpx
-import pytest
 
-from mrva.commands import run
 from mrva import types
+from mrva.commands import run
 
 
 def _make_zip_with_sarif(sarif_content=b'{"runs":[]}'):
@@ -18,9 +15,17 @@ def _make_zip_with_sarif(sarif_content=b'{"runs":[]}'):
     return buf.getvalue()
 
 
-def _mock_args(tmp_path, run_command="top", limit=100, resume=None,
-               controller_repo="owner/ctrl", language="python", token="tok",
-               base_url="https://api.github.com", timeout=30):
+def _mock_args(
+    tmp_path,
+    run_command="top",
+    limit=100,
+    resume=None,
+    controller_repo="owner/ctrl",
+    language="python",
+    token="tok",
+    base_url="https://api.github.com",
+    timeout=30,
+):
     args = unittest.mock.MagicMock()
     args.mrva_dir = tmp_path
     args.run_command = run_command
@@ -35,32 +40,52 @@ def _mock_args(tmp_path, run_command="top", limit=100, resume=None,
     return args
 
 
-def _make_client_mock(va_id=42, ctrl_repo_id=123, repo_id=99, full_name="octocat/hello"):
+def _make_client_mock(
+    va_id=42, ctrl_repo_id=123, repo_id=99, full_name="octocat/hello"
+):
     client = unittest.mock.AsyncMock()
 
     client.__aenter__ = unittest.mock.AsyncMock(return_value=client)
     client.__aexit__ = unittest.mock.AsyncMock(return_value=False)
 
     # get_repo (controller repo lookup)
-    client.get_repo.return_value = httpx.Response(200, json={"id": ctrl_repo_id, "full_name": "owner/ctrl"})
+    client.get_repo.return_value = httpx.Response(
+        200, json={"id": ctrl_repo_id, "full_name": "owner/ctrl"}
+    )
 
     # submit_variant_analysis
-    client.submit_variant_analysis.return_value = httpx.Response(201, json={"id": va_id, "status": "in_progress"})
+    client.submit_variant_analysis.return_value = httpx.Response(
+        201, json={"id": va_id, "status": "in_progress"}
+    )
 
     # get_variant_analysis: first call in_progress, second succeeded
-    scanned = [{"repository": {"id": repo_id, "full_name": full_name}, "analysis_status": "succeeded", "result_count": 1}]
+    scanned = [
+        {
+            "repository": {"id": repo_id, "full_name": full_name},
+            "analysis_status": "succeeded",
+            "result_count": 1,
+        }
+    ]
     client.get_variant_analysis.side_effect = [
-        httpx.Response(200, json={"id": va_id, "status": "in_progress", "scanned_repositories": []}),
-        httpx.Response(200, json={"id": va_id, "status": "succeeded", "scanned_repositories": scanned}),
+        httpx.Response(
+            200, json={"id": va_id, "status": "in_progress", "scanned_repositories": []}
+        ),
+        httpx.Response(
+            200,
+            json={"id": va_id, "status": "succeeded", "scanned_repositories": scanned},
+        ),
     ]
 
     # get_variant_analysis_repo_task
-    client.get_variant_analysis_repo_task.return_value = httpx.Response(200, json={
-        "repository": {"id": repo_id, "full_name": full_name},
-        "analysis_status": "succeeded",
-        "artifact_url": "https://example.com/artifact.zip",
-        "database_commit_sha": "abc123",
-    })
+    client.get_variant_analysis_repo_task.return_value = httpx.Response(
+        200,
+        json={
+            "repository": {"id": repo_id, "full_name": full_name},
+            "analysis_status": "succeeded",
+            "artifact_url": "https://example.com/artifact.zip",
+            "database_commit_sha": "abc123",
+        },
+    )
 
     # artifact download
     client.client = unittest.mock.AsyncMock()
@@ -76,7 +101,9 @@ async def test_run_full_flow(tmp_path):
 
     with (
         unittest.mock.patch("mrva.commands.run.gh.Client", return_value=client_mock),
-        unittest.mock.patch("mrva.commands.run.pack.build_query_pack", return_value="base64pack"),
+        unittest.mock.patch(
+            "mrva.commands.run.pack.build_query_pack", return_value="base64pack"
+        ),
         unittest.mock.patch("mrva.commands.run.asyncio.sleep"),
     ):
         result = await run.main(args, [])
@@ -132,18 +159,30 @@ async def test_run_partial_failure(tmp_path):
     args = _mock_args(tmp_path)
 
     scanned = [
-        {"repository": {"id": 1, "full_name": "owner/good"}, "analysis_status": "succeeded", "result_count": 1},
-        {"repository": {"id": 2, "full_name": "owner/bad"}, "analysis_status": "failed", "result_count": 0},
+        {
+            "repository": {"id": 1, "full_name": "owner/good"},
+            "analysis_status": "succeeded",
+            "result_count": 1,
+        },
+        {
+            "repository": {"id": 2, "full_name": "owner/bad"},
+            "analysis_status": "failed",
+            "result_count": 0,
+        },
     ]
 
     client_mock = _make_client_mock(repo_id=1, full_name="owner/good")
     client_mock.get_variant_analysis.side_effect = [
-        httpx.Response(200, json={"id": 42, "status": "succeeded", "scanned_repositories": scanned}),
+        httpx.Response(
+            200, json={"id": 42, "status": "succeeded", "scanned_repositories": scanned}
+        ),
     ]
 
     with (
         unittest.mock.patch("mrva.commands.run.gh.Client", return_value=client_mock),
-        unittest.mock.patch("mrva.commands.run.pack.build_query_pack", return_value="base64pack"),
+        unittest.mock.patch(
+            "mrva.commands.run.pack.build_query_pack", return_value="base64pack"
+        ),
         unittest.mock.patch("mrva.commands.run.asyncio.sleep"),
     ):
         result = await run.main(args, [])
@@ -161,11 +200,15 @@ async def test_run_submission_failure(tmp_path):
     """Non-2xx submission response returns exit code 1."""
     args = _mock_args(tmp_path)
     client_mock = _make_client_mock()
-    client_mock.submit_variant_analysis.return_value = httpx.Response(403, json={"message": "Forbidden"})
+    client_mock.submit_variant_analysis.return_value = httpx.Response(
+        403, json={"message": "Forbidden"}
+    )
 
     with (
         unittest.mock.patch("mrva.commands.run.gh.Client", return_value=client_mock),
-        unittest.mock.patch("mrva.commands.run.pack.build_query_pack", return_value="base64pack"),
+        unittest.mock.patch(
+            "mrva.commands.run.pack.build_query_pack", return_value="base64pack"
+        ),
         unittest.mock.patch("mrva.commands.run.asyncio.sleep"),
     ):
         result = await run.main(args, [])
