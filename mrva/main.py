@@ -314,6 +314,149 @@ def parse_args(args):
         action="append",
         help="Ignore CodeQL SARIF results that contain these mrva names"
     )
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Run a CodeQL variant analysis as a cloud job via GitHub Actions",
+    )
+    run_parser.add_argument(
+        "-t",
+        "--token",
+        action=EnvDefault,
+        envvar="GITHUB_TOKEN",
+        help="GitHub API token, or specify $GITHUB_TOKEN",
+    )
+    run_parser.add_argument(
+        "-b",
+        "--base-url",
+        action=EnvDefault,
+        default="https://api.github.com",
+        envvar="GITHUB_BASE_URL",
+        help="GitHub base URL, or specify $GITHUB_BASE_URL",
+    )
+    run_parser.add_argument(
+        "--timeout",
+        action="store",
+        default=30,
+        help="HTTP request timeout",
+    )
+    run_parser.add_argument(
+        "-c",
+        "--controller-repo",
+        action=EnvDefault,
+        envvar="MRVA_CONTROLLER_REPO",
+        required=False,
+        help="Controller repository (owner/repo), or specify $MRVA_CONTROLLER_REPO",
+    )
+    run_parser.add_argument(
+        "-l",
+        "--language",
+        action="store",
+        choices=CODEQL_LANGUAGES,
+        help="CodeQL query language",
+    )
+    run_parser.add_argument(
+        "--resume",
+        action="store",
+        type=int,
+        default=None,
+        metavar="VARIANT_ANALYSIS_ID",
+        help="Resume a previously submitted variant analysis by ID",
+    )
+    run_parser.add_argument(
+        "mrva_dir",
+        type=pathlib.Path,
+        default=pathlib.Path.cwd(),
+        help="mrva storage and configuration directory",
+    )
+    run_parser.add_argument(
+        "query",
+        action="store",
+        nargs="?",
+        help="Path to a .ql file or qlpack directory",
+    )
+
+    run_subparsers = run_parser.add_subparsers(
+        dest="run_command",
+        help="Repository selection strategy",
+    )
+
+    run_top_parser = run_subparsers.add_parser(
+        "top",
+        help="Top repositories by star count",
+    )
+    run_top_parser.add_argument(
+        "-i",
+        "--limit",
+        action="store",
+        choices=[10, 100, 1000],
+        default=100,
+        type=int,
+        help="Maximum number of repositories",
+    )
+
+    run_org_parser = run_subparsers.add_parser(
+        "org",
+        help="Repositories for a specific organization",
+    )
+    run_org_parser.add_argument(
+        "-o",
+        "--owner",
+        action="store",
+        required=True,
+        help="GitHub organization name",
+    )
+
+    run_repo_parser = run_subparsers.add_parser(
+        "repo",
+        help="Specific repository",
+    )
+    run_repo_parser.add_argument(
+        "-o",
+        "--owner",
+        action="store",
+        required=True,
+        help="GitHub repository owner",
+    )
+    run_repo_parser.add_argument(
+        "-r",
+        "--repository",
+        action="store",
+        required=True,
+        help="GitHub repository name",
+    )
+
+    run_query_parser = run_subparsers.add_parser(
+        "query",
+        help="Repositories based on an arbitrary search query",
+    )
+    run_query_parser.add_argument(
+        "-i",
+        "--limit",
+        action="store",
+        choices=[10, 100, 1000],
+        default=100,
+        type=int,
+        help="Maximum number of repositories",
+    )
+    run_query_parser.add_argument(
+        "-q",
+        "--query",
+        action="store",
+        required=True,
+        help="GitHub repository search query",
+    )
+
+    run_from_file_parser = run_subparsers.add_parser(
+        "from-file",
+        help="Custom repository list",
+    )
+    run_from_file_parser.add_argument(
+        "json_file",
+        action="store",
+        type=argparse.FileType("r"),
+        help="File containing repository information",
+    )
+
     # fmt: on
 
     known, unknown = p.parse_known_args(args=args)
@@ -324,11 +467,13 @@ def parse_args(args):
         known = p.parse_args(args=args)
         unknown = []
 
-    if known.command in ["download", "analyze", "print-ast"]:
+    if known.command in ["download", "analyze", "print-ast", "run"]:
         if not known.mrva_dir.is_dir():
             raise argparse.ArgumentTypeError(
                 f"{known.mrva_dir} is not an existing mrva directory"
             )
+    if known.command == "run" and not known.resume and not known.language:
+        p.error("--language is required for mrva run unless --resume is specified")
     elif known.command == "pprint":
         if not (known.target.is_dir() or known.target.is_file()):
             raise argparse.ArgumentTypeError(
@@ -352,6 +497,7 @@ async def amain():
         "analyze": commands.analyze.main,
         "pprint": commands.pprint.main,
         "print-ast": commands.print_ast.main,
+        "run": commands.run.main,
     }
     command = command_dispatch.get(args.command)
     if command is None:

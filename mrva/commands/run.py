@@ -22,11 +22,11 @@ def _mrva_name(language, full_name):
     return f"mrva-{language}-{full_name.replace('/', '-')}"
 
 
-def _build_databases(args):
+def _build_databases(args, language=None):
     """Map run subcommand args to the API databases payload dict."""
     cmd = args.run_command
     if cmd == "top":
-        return {"repository_lists": [f"top_{args.limit}"]}
+        return {"repository_lists": [f"top-{args.limit}-{language}"]}
     elif cmd == "org":
         return {"repository_owners": [args.owner]}
     elif cmd == "repo":
@@ -125,7 +125,7 @@ async def main(args, argv):
                 logger.info("Building query pack from %s", args.query)
                 base64_pack = pack.build_query_pack(args.query, language, tmp_dir)
 
-            databases = _build_databases(args)
+            databases = _build_databases(args, language)
             payload = {
                 "action_repo_ref": "main",
                 "language": language,
