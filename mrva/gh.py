@@ -160,3 +160,27 @@ class Client:
         )
 
         yield [resp.json() for resp in responses]
+
+    async def submit_variant_analysis(self, controller_repo_id, payload):
+        # https://docs.github.com/en/rest/code-scanning/code-scanning?apiVersion=2022-11-28#create-a-codeql-variant-analysis
+        return await retry(
+            self.client.post,
+            f"/repositories/{controller_repo_id}/code-scanning/codeql/variant-analyses",
+            json=payload,
+        )
+
+    async def get_variant_analysis(self, controller_repo_id, variant_analysis_id):
+        # https://docs.github.com/en/rest/code-scanning/code-scanning?apiVersion=2022-11-28#get-the-summary-of-a-codeql-variant-analysis
+        return await retry(
+            self.client.get,
+            f"/repositories/{controller_repo_id}/code-scanning/codeql/variant-analyses/{variant_analysis_id}",
+        )
+
+    async def get_variant_analysis_repo_task(
+        self, controller_repo_id, variant_analysis_id, repo_id
+    ):
+        # https://docs.github.com/en/rest/code-scanning/code-scanning?apiVersion=2022-11-28#get-the-analysis-status-of-a-repository-in-a-codeql-variant-analysis
+        return await retry(
+            self.client.get,
+            f"/repositories/{controller_repo_id}/code-scanning/codeql/variant-analyses/{variant_analysis_id}/repositories/{repo_id}",
+        )
