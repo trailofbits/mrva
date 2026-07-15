@@ -118,3 +118,9 @@ def path_problem_query_with_snippets_sarif(path_problem_query_mrva_dir):
         / "mrva-python-someorg-with-snippets"
         / types.MRVA_REPO_SARIF_FILENAME
     )
+
+
+@pytest.fixture
+def semgrep_sarif():
+    # semgrep --config rules.yaml --sarif --output results.sarif code.py
+    return CURDIR / "pprint_fixtures" / "semgrep" / "results.sarif"

@@ -257,6 +257,58 @@ async def test_pprint_path_problem_query_with_contents_flows(
         assert e in result.out
 
 
+async def test_pprint_semgrep_sarif(capsys, semgrep_sarif):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            str(semgrep_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+    expected = [
+        "(ln: 3:3 col: 1:19)",
+        "(ln: 5:5 col: 1:34)",
+        "(ln: 7:10 col: 1:2)",
+        '3 API_KEY = "abc123"',
+        '5 subprocess.call("ls", shell=True)',
+        "7 subprocess.call(",
+        '8     "grep foo",',
+        "9     shell=True,",
+        "10 )",
+    ]
+
+    assert code == 0
+    for e in expected:
+        assert e in result.out
+
+
+async def test_pprint_semgrep_sarif_repo_url(capsys, semgrep_sarif):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            "--repo-url",
+            "https://github.com/someorg/somerepo/blob/abcdef",
+            str(semgrep_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+    expected = [
+        "https://github.com/someorg/somerepo/blob/abcdef/code.py#L3-L3",
+        "https://github.com/someorg/somerepo/blob/abcdef/code.py#L5-L5",
+        "https://github.com/someorg/somerepo/blob/abcdef/code.py#L7-L10",
+    ]
+
+    assert code == 0
+    for e in expected:
+        assert e in result.out
+
+
 async def test_pprint_path_problem_query_with_contents_no_flows(
     capsys,
     path_problem_query_mrva_dir,

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for pprint'ing Semgrep SARIF results
+
 ### Changed
 
 - Suppress `BrokenPipeError` exceptions in `pprint` when piping output (e.g. to `less`)

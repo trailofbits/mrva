@@ -1,0 +1,11 @@
+rules:
+  - id: hardcoded-api-key
+    pattern: API_KEY = "..."
+    message: Hardcoded API key
+    languages: [python]
+    severity: WARNING
+  - id: shell-injection-risk
+    pattern: subprocess.call(..., shell=True)
+    message: subprocess.call invoked with shell=True
+    languages: [python]
+    severity: WARNING

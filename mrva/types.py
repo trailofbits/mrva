@@ -93,16 +93,25 @@ class SARIFLocation:
         return self.location["region"].get("endColumn", "$")
 
     @property
-    def context_snippet(self):
-        # --sarif-add-snippets provides this data
+    def snippet_text(self):
+        # CodeQL --sarif-add-snippets provides this data
         text = self.location.get("contextRegion", {}).get("snippet", {}).get("text")
+
+        if text is None:
+            # Semgrep --sarif provides this data
+            text = self.location.get("region", {}).get("snippet", {}).get("text")
 
         # rstrip because CodeQL includes the last line's newline for some reason
         return text.rstrip() if text is not None else text
 
     @property
-    def context_start_line(self):
-        return self.location["contextRegion"]["startLine"]
+    def snippet_start_line(self):
+        # CodeQL's contextRegion begins before the matched region
+        if "contextRegion" in self.location:
+            return self.location["contextRegion"]["startLine"]
+
+        # Semgrep's region snippet begins at the match itself
+        return self.start_line
 
 
 class SARIFResult:
@@ -111,14 +120,19 @@ class SARIFResult:
 
     @property
     def rule_id(self):
-        return self.result["rule"]["id"]
+        try:
+            # CodeQL
+            return self.result["rule"]["id"]
+        except KeyError:
+            # Semgrep
+            return self.result["ruleId"]
 
     @property
     def message(self):
         return self.result["message"]["text"]
 
     def locations(self, flows=True):
-        # Assume only path-problem query kinds have codeFlows
+        # Assume only CodeQL path-problem query kinds have codeFlows
         has_code_flows = "codeFlows" in self.result
 
         if flows and has_code_flows:
@@ -155,13 +169,13 @@ class SARIFOutput:
         return [SARIFResult(r) for r in self.first_run["results"]]
 
     def artifact_contents(self, index):
-        # --sarif-add-file-contents provides this data
+        # CodeQL --sarif-add-file-contents provides this data
         return self.first_run["artifacts"][index].get("contents", {}).get("text")
 
     def numbered_lines(self, location, context):
         contents = (
-            location.context_snippet
-            if location.context_snippet is not None
+            location.snippet_text
+            if location.snippet_text is not None
             else self.artifact_contents(location.artifact_index)
         )
 
@@ -170,13 +184,13 @@ class SARIFOutput:
 
         lines = contents.split("\n")
 
-        if location.context_snippet is not None:
-            # Assume --sarif-add-snippets provides contextRegion, which
+        if location.snippet_text is not None:
+            # Assume CodeQL --sarif-add-snippets provides contextRegion, which
             # hardcodes two lines of context. In this situation output all
             # the snippet content provided.
             list_start = 0
             end = len(lines)
-            line_start = location.context_start_line
+            line_start = location.snippet_start_line
         else:
             start = location.start_line - context.before
             end = location.end_line + context.after
