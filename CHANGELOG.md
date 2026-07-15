@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support for pprint'ing Semgrep SARIF results
+- `pprint` CLI flags for filtering result output: `--{select,ignore}-{id,path}`
 
 ### Changed
 

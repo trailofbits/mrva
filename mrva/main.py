@@ -257,6 +257,28 @@ def parse_args(args):
         action="append",
         help="Ignore CodeQL SARIF results that contain these mrva names"
     )
+    pprint_id_filter_group = pprint_parser.add_mutually_exclusive_group(required=False)
+    pprint_id_filter_group.add_argument(
+        "--select-id",
+        action="append",
+        help="Select SARIF results whose rule ID matches these fnmatch patterns"
+    )
+    pprint_id_filter_group.add_argument(
+        "--ignore-id",
+        action="append",
+        help="Ignore SARIF results whose rule ID matches these fnmatch patterns"
+    )
+    pprint_path_filter_group = pprint_parser.add_mutually_exclusive_group(required=False)
+    pprint_path_filter_group.add_argument(
+        "--select-path",
+        action="append",
+        help="Select SARIF results whose sink location path matches these fnmatch patterns"
+    )
+    pprint_path_filter_group.add_argument(
+        "--ignore-path",
+        action="append",
+        help="Ignore SARIF results whose sink location path matches these fnmatch patterns"
+    )
     context_group = pprint_parser.add_mutually_exclusive_group(required=False)
     context_group.add_argument(
         "-A",

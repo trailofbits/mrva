@@ -1,5 +1,7 @@
 import collections
 import dataclasses
+import fnmatch
+import functools
 import json
 
 from mrva import util
@@ -131,6 +133,7 @@ class SARIFResult:
     def message(self):
         return self.result["message"]["text"]
 
+    @functools.cache
     def locations(self, flows=True):
         # Assume only CodeQL path-problem query kinds have codeFlows
         has_code_flows = "codeFlows" in self.result
@@ -171,6 +174,33 @@ class SARIFOutput:
     def artifact_contents(self, index):
         # CodeQL --sarif-add-file-contents provides this data
         return self.first_run["artifacts"][index].get("contents", {}).get("text")
+
+    def matching_results(
+        self,
+        select_ids=None,
+        ignore_ids=None,
+        select_paths=None,
+        ignore_paths=None,
+    ):
+        def matches_any(patterns, value):
+            return any(fnmatch.fnmatchcase(value, p) for p in patterns)
+
+        def keep(result):
+            if select_ids and not matches_any(select_ids, result.rule_id):
+                return False
+            if ignore_ids and matches_any(ignore_ids, result.rule_id):
+                return False
+            if select_paths or ignore_paths:
+                # For CodeQL path-problem results this is the sink;
+                # otherwise the only primary location.
+                path = result.locations()[-1].path
+                if select_paths and not matches_any(select_paths, path):
+                    return False
+                if ignore_paths and matches_any(ignore_paths, path):
+                    return False
+            return True
+
+        return util.partition(self.results, keep)
 
     def numbered_lines(self, location, context):
         contents = (

@@ -58,12 +58,33 @@ def color(color, s):
     return f"{color}{s}{END}"
 
 
-def print_sarif_output(sarif_path, context, gh_url="", flows=True, file=None):
+def print_sarif_output(
+    sarif_path,
+    context,
+    gh_url="",
+    flows=True,
+    select_ids=None,
+    ignore_ids=None,
+    select_paths=None,
+    ignore_paths=None,
+    file=None,
+):
     if file is None:
         # https://github.com/pytest-dev/pytest/issues/5997
         file = sys.stdout
 
     sarif_output = types.SARIFOutput.from_path(sarif_path)
+    kept, discarded = sarif_output.matching_results(
+        select_ids=select_ids,
+        ignore_ids=ignore_ids,
+        select_paths=select_paths,
+        ignore_paths=ignore_paths,
+    )
+    if discarded:
+        logger.info(
+            "Kept %d SARIF results, discarded %d by filter", len(kept), len(discarded)
+        )
+
     trs = [
         {
             "rule_id": color(BOLD_RED, result.rule_id),
@@ -86,7 +107,7 @@ def print_sarif_output(sarif_path, context, gh_url="", flows=True, file=None):
                 for location in result.locations(flows=flows)
             ],
         }
-        for result in sarif_output.results
+        for result in kept
     ]
     if trs:
         with util.suppress_broken_pipe():
@@ -121,7 +142,16 @@ async def main(args, argv):
     for repo, sarif_path in repo_sarif_paths:
         if sarif_path.exists():
             gh_url = args.repo_url if args.repo_url else permalink(repo)
-            print_sarif_output(sarif_path, context, gh_url=gh_url, flows=args.flows)
+            print_sarif_output(
+                sarif_path,
+                context,
+                gh_url=gh_url,
+                flows=args.flows,
+                select_ids=args.select_id,
+                ignore_ids=args.ignore_id,
+                select_paths=args.select_path,
+                ignore_paths=args.ignore_path,
+            )
         else:
             logger.warning("Skipping %s, could not find SARIF output", repo.mrva_name)
 

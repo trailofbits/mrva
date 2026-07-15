@@ -285,6 +285,125 @@ async def test_pprint_semgrep_sarif(capsys, semgrep_sarif):
         assert e in result.out
 
 
+async def test_pprint_semgrep_sarif_select_id(capsys, semgrep_sarif):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            "--select-id",
+            "hardcoded*",
+            str(semgrep_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+
+    assert code == 0
+    assert "hardcoded-api-key" in result.out
+    assert "shell-injection-risk" not in result.out
+
+
+async def test_pprint_semgrep_sarif_ignore_id(capsys, semgrep_sarif):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            "--ignore-id",
+            "hardcoded*",
+            str(semgrep_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+
+    assert code == 0
+    assert "hardcoded-api-key" not in result.out
+    assert "shell-injection-risk" in result.out
+
+
+async def test_pprint_semgrep_sarif_select_path(capsys, semgrep_sarif):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            "--select-path",
+            "vendor/*",
+            str(semgrep_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+
+    assert code == 0
+    assert "vendor/lib.py" in result.out
+    assert '"grep foo"' not in result.out
+
+
+async def test_pprint_semgrep_sarif_ignore_path(capsys, semgrep_sarif):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            "--ignore-path",
+            "vendor/*",
+            str(semgrep_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+
+    assert code == 0
+    assert "vendor/lib.py" not in result.out
+    assert '"grep foo"' in result.out
+
+
+async def test_pprint_semgrep_sarif_select_id_and_ignore_path(capsys, semgrep_sarif):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            "--select-id",
+            "hardcoded*",
+            "--ignore-path",
+            "vendor/*",
+            str(semgrep_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+
+    assert code == 0
+    assert '3 API_KEY = "abc123"' in result.out
+    assert "vendor/lib.py" not in result.out
+    assert "shell-injection-risk" not in result.out
+
+
+async def test_pprint_problem_query_select_id_no_matches(
+    capsys, problem_query_with_snippets_sarif
+):
+    args = main.parse_args(
+        [
+            "pprint",
+            "--context",
+            "0",
+            "--select-id",
+            "nonexistent-rule",
+            str(problem_query_with_snippets_sarif),
+        ]
+    )
+    code = await commands.pprint.main(*args)
+    result = capsys.readouterr()
+
+    assert code == 0
+    assert "class A:" not in result.out
+    assert "class B:" not in result.out
+
+
 async def test_pprint_semgrep_sarif_repo_url(capsys, semgrep_sarif):
     args = main.parse_args(
         [
