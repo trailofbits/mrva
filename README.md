@@ -2,12 +2,9 @@
 
 `mrva` is a terminal-first approach to CodeQL [multi-repo variant analysis](https://docs.github.com/en/code-security/codeql-for-vs-code/getting-started-with-codeql-for-vs-code/running-codeql-queries-at-scale-with-multi-repository-variant-analysis). You can download existing CodeQL databases from the GitHub API, run variant analyses, and view results all from your local machine. This tool was inspired by the VSCode [CodeQL extension](https://github.com/github/vscode-codeql), but instead runs as a standalone CLI tool.
 
-<p style="text-align: center;">
-  <figure>
-    <img src="https://blog.trailofbits.com/2025/12/11/introducing-mrva-a-terminal-first-approach-to-codeql-multi-repo-variant-analysis/introducing-mrva-image_hu_fd3f685a1b3d7931.webp" alt="mrva pprint demo image" width="50%" height="50%">
-    <figcaption style="font-style: italic;">Example of the <code>pprint</code> command</figcaption>
-  </figure>
-</p>
+Example of the `pprint` command:
+
+<img src="https://blog.trailofbits.com/2025/12/11/introducing-mrva-a-terminal-first-approach-to-codeql-multi-repo-variant-analysis/introducing-mrva-image_hu_fd3f685a1b3d7931.webp" alt="mrva pprint demo image" width="50%">
 
 Table of contents:
 
