@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Suppress `BrokenPipeError` exceptions in `pprint` when piping output (e.g. to `less`)
+- Don't output ANSI color escapes unless output is a TTY
 
 ## [0.5.0] - 2024-12-11
 

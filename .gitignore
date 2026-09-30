@@ -132,7 +132,7 @@ dmypy.json
 harness/
 
 # Test CodeQL database directory
-dbs/
+dbs*/
 
 # Vim swap files
 *.sw[op]

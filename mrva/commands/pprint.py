@@ -68,6 +68,7 @@ def print_sarif_output(
     select_paths=None,
     ignore_paths=None,
     file=None,
+    color_fn=color,
 ):
     if file is None:
         # https://github.com/pytest-dev/pytest/issues/5997
@@ -87,11 +88,11 @@ def print_sarif_output(
 
     trs = [
         {
-            "rule_id": color(BOLD_RED, result.rule_id),
-            "message": color(BOLD_CYAN, result.message),
+            "rule_id": color_fn(BOLD_RED, result.rule_id),
+            "message": color_fn(BOLD_CYAN, result.message),
             "locations": [
                 {
-                    "path": color(BOLD_GREEN, location.path),
+                    "path": color_fn(BOLD_GREEN, location.path),
                     "start_line": location.start_line,
                     "end_line": location.end_line,
                     "start_column": location.start_column,
@@ -139,6 +140,9 @@ async def main(args, argv):
         logger.info("pprinting SARIF file %s", args.target)
         repo_sarif_paths = [(None, args.target)]
 
+    output_fd = sys.stdout
+    color_fn = color if output_fd.isatty() else lambda c, s: s
+
     for repo, sarif_path in repo_sarif_paths:
         if sarif_path.exists():
             gh_url = args.repo_url if args.repo_url else permalink(repo)
@@ -151,6 +155,8 @@ async def main(args, argv):
                 ignore_ids=args.ignore_id,
                 select_paths=args.select_path,
                 ignore_paths=args.ignore_path,
+                file=output_fd,
+                color_fn=color_fn,
             )
         else:
             logger.warning("Skipping %s, could not find SARIF output", repo.mrva_name)
